@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF
+  xmlns:ndt="http://example.org/ndt#"
+  xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+>
+  <rdf:Description rdf:about="http://example.org/instance#Concrete">
+    <ndt:hasDefect>
+      <rdf:Description rdf:about="http://example.org/instance#Cracking">
+        <ndt:detectedBy>Ultrasonic Testing</ndt:detectedBy>
+      </rdf:Description>
+    </ndt:hasDefect>
+  </rdf:Description>
+</rdf:RDF>

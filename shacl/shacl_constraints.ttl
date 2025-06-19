@@ -1,0 +1,54 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ndt: <http://example.org/ndt#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+######################
+# Material constraints
+######################
+ndt:MaterialShape a sh:NodeShape ;
+    sh:targetClass ndt:Material ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "Material must have an rdfs:label" ;
+    ] ;
+    sh:property [
+        sh:path ndt:HAS_DETERIORATION_MECHANISM ;
+        sh:minCount 1 ;
+        sh:message "Material must be linked to at least one deterioration mechanism." ;
+    ] .
+
+#########################
+# NDTMethod constraints
+#########################
+ndt:NDTMethodShape a sh:NodeShape ;
+    sh:targetClass ndt:NDTMethod ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "NDTMethod must have an rdfs:label" ;
+    ] .
+
+#######################
+# Environment constraint
+#######################
+ndt:EnvironmentShape a sh:NodeShape ;
+    sh:targetClass ndt:Environment ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:minCount 1 ;
+        sh:message "Environment must have an rdfs:label" ;
+    ] .
+
+#######################
+# InspectionPlan constraint
+#######################
+ndt:InspectionPlanShape a sh:NodeShape ;
+    sh:targetClass ndt:InspectionPlan ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:minCount 1 ;
+        sh:message "InspectionPlan must have a label" ;
+    ] .

@@ -1,0 +1,700 @@
+@prefix ex: <http://example.org/instance#> .
+@prefix ndt: <http://example.org/ndt#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ex:node108 a ndt:Material ;
+    rdfs:label "Concrete" ;
+    ndt:HAS_DETERIORATION_MECHANISM ex:node0,
+        ex:node112,
+        ex:node119,
+        ex:node120,
+        ex:node121,
+        ex:node122,
+        ex:node123,
+        ex:node127,
+        ex:node129,
+        ex:node133,
+        ex:node136,
+        ex:node137,
+        ex:node4,
+        ex:node5 .
+
+ex:node109 a ndt:Material ;
+    rdfs:label "Steel" ;
+    ndt:HAS_DETERIORATION_MECHANISM ex:node112,
+        ex:node147,
+        ex:node149,
+        ex:node157 .
+
+ex:node11 a ndt:NDTMethod ;
+    rdfs:label "Visual Inspection" .
+
+ex:node110 a ndt:Material ;
+    rdfs:label "Wood" ;
+    ndt:HAS_DETERIORATION_MECHANISM ex:node164,
+        ex:node167,
+        ex:node169,
+        ex:node172,
+        ex:node174,
+        ex:node175,
+        ex:node195,
+        ex:node197,
+        ex:node199,
+        ex:node201,
+        ex:node203,
+        ex:node205 .
+
+ex:node111 a ndt:Material ;
+    rdfs:label "Bricks" ;
+    ndt:HAS_DETERIORATION_MECHANISM ex:node209,
+        ex:node210 .
+
+ex:node12 a ndt:Sensor ;
+    rdfs:label "Acoustic Sensor" ;
+    ndt:RECOMMENDED_FOR ex:node10 .
+
+ex:node13 a ndt:Sensor ;
+    rdfs:label "Thermal Camera" ;
+    ndt:RECOMMENDED_FOR ex:node204 .
+
+ex:node14 a ndt:InspectionPlan ;
+    rdfs:label "None" .
+
+ex:node15 a ndt:InspectionPlan ;
+    rdfs:label "None" .
+
+ex:node16 a ndt:InspectionPlan ;
+    rdfs:label "None" .
+
+ex:node17 a ndt:InspectionPlan ;
+    rdfs:label "None" .
+
+ex:node18 a ndt:InspectionPlan ;
+    rdfs:label "None" .
+
+ex:node19 a ndt:InspectionPlan ;
+    rdfs:label "None" .
+
+ex:node20 a ndt:InspectionPlan ;
+    rdfs:label "None" .
+
+ex:node21 a ndt:InspectionPlan ;
+    rdfs:label "None" .
+
+ex:node22 a ndt:InspectionPlan ;
+    rdfs:label "None" .
+
+ex:node3 a ndt:Sensor ;
+    rdfs:label "Moisture Sensor" ;
+    ndt:RECOMMENDED_FOR ex:node2 .
+
+ex:node7 a ndt:Environment ;
+    rdfs:label "Submerged" .
+
+ex:node0 a ndt:Deterioration ;
+    rdfs:label "Corrosion" ;
+    ndt:DETECTED_BY ex:node2,
+        ex:node204 .
+
+ex:node119 a ndt:DeteriorationMechanism ;
+    rdfs:label "freeze-thaw cycles" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node113,
+        ex:node115,
+        ex:node117 .
+
+ex:node120 a ndt:DeteriorationMechanism ;
+    rdfs:label "chemical attack" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node113,
+        ex:node115,
+        ex:node117 .
+
+ex:node121 a ndt:DeteriorationMechanism ;
+    rdfs:label "changes in microstructure" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node113,
+        ex:node115,
+        ex:node117 .
+
+ex:node122 a ndt:DeteriorationMechanism ;
+    rdfs:label "changes in mechanical properties" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node113,
+        ex:node115,
+        ex:node117 .
+
+ex:node123 a ndt:DeteriorationMechanism ;
+    rdfs:label "dimensional changes" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node113,
+        ex:node115,
+        ex:node117 .
+
+ex:node127 a ndt:DeteriorationMechanism ;
+    rdfs:label "extreme temperature changes" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node113,
+        ex:node115,
+        ex:node117 .
+
+ex:node129 a ndt:DeteriorationMechanism ;
+    rdfs:label "mechanical loading" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node113,
+        ex:node115,
+        ex:node131,
+        ex:node132 .
+
+ex:node131 a ndt:PhysicalChange ;
+    rdfs:label "voids" ;
+    ndt:DETECTED_BY ex:node130 .
+
+ex:node133 a ndt:DeteriorationMechanism ;
+    rdfs:label "moisture ingress" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node113,
+        ex:node115,
+        ex:node117 .
+
+ex:node136 a ndt:DeteriorationMechanism ;
+    rdfs:label "carbonation" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node113,
+        ex:node115 .
+
+ex:node137 a ndt:DeteriorationMechanism ;
+    rdfs:label "chloride ion content" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node113,
+        ex:node115 .
+
+ex:node139 a ndt:NDTMethod ;
+    rdfs:label "rebound hammer" .
+
+ex:node140 a ndt:NDTMethod ;
+    rdfs:label "pullout test" .
+
+ex:node141 a ndt:NDTMethod ;
+    rdfs:label "pull-off test" .
+
+ex:node142 a ndt:NDTMethod ;
+    rdfs:label "penetration resistance methods" .
+
+ex:node143 a ndt:NDTMethod ;
+    rdfs:label "ultrasonic pulse velocity method" .
+
+ex:node144 a ndt:PhysicalChange ;
+    rdfs:label "thinning" ;
+    ndt:DETECTED_BY ex:node116,
+        ex:node146,
+        ex:node148,
+        ex:node155,
+        ex:node156,
+        ex:node160 .
+
+ex:node147 a ndt:DeteriorationMechanism ;
+    rdfs:label "fatigue" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node113,
+        ex:node145,
+        ex:node150,
+        ex:node152,
+        ex:node153 .
+
+ex:node149 a ndt:DeteriorationMechanism ;
+    rdfs:label "stress corrosion cracking" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node113,
+        ex:node150,
+        ex:node152,
+        ex:node153 .
+
+ex:node157 a ndt:DeteriorationMechanism ;
+    rdfs:label "residual stresses" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node152 .
+
+ex:node158 a ndt:NDTMethod ;
+    rdfs:label "ultrasonic critical refracted longitudinal waves" .
+
+ex:node159 a ndt:NDTMethod ;
+    rdfs:label "guided ultrasonic wave procedure" .
+
+ex:node163 a ndt:NDTMethod ;
+    rdfs:label "x-ray diffraction analysis" .
+
+ex:node164 a ndt:DeteriorationMechanism ;
+    rdfs:label "fungal decay" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node165,
+        ex:node166,
+        ex:node168,
+        ex:node177,
+        ex:node192,
+        ex:node193,
+        ex:node194 .
+
+ex:node167 a ndt:DeteriorationMechanism ;
+    rdfs:label "insect attack" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node165,
+        ex:node166,
+        ex:node168,
+        ex:node176,
+        ex:node185,
+        ex:node193 .
+
+ex:node169 a ndt:DeteriorationMechanism ;
+    rdfs:label "UV exposure" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node170,
+        ex:node171,
+        ex:node194 .
+
+ex:node170 a ndt:PhysicalChange ;
+    rdfs:label "surface roughness" ;
+    ndt:DETECTED_BY ex:node114 .
+
+ex:node171 a ndt:PhysicalChange ;
+    rdfs:label "erosion of early-wood" ;
+    ndt:DETECTED_BY ex:node114 .
+
+ex:node172 a ndt:DeteriorationMechanism ;
+    rdfs:label "mechanical wear" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node132,
+        ex:node173 .
+
+ex:node174 a ndt:DeteriorationMechanism ;
+    rdfs:label "moisture changes" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node132,
+        ex:node173 .
+
+ex:node175 a ndt:DeteriorationMechanism ;
+    rdfs:label "mechanical long-term load" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node165,
+        ex:node176 .
+
+ex:node177 a ndt:PhysicalChange ;
+    rdfs:label "changes in density" ;
+    ndt:DETECTED_BY ex:node178 .
+
+ex:node178 a ndt:NDTMethod ;
+    rdfs:label "electrical resistance" .
+
+ex:node180 a ndt:NDTMethod ;
+    rdfs:label "X-ray imaging" .
+
+ex:node181 a ndt:NDTMethod ;
+    rdfs:label "drilling resistance" .
+
+ex:node182 a ndt:NDTMethod ;
+    rdfs:label "eigenfrequency measurements" .
+
+ex:node183 a ndt:NDTMethod ;
+    rdfs:label "video image correlation" .
+
+ex:node185 a ndt:PhysicalChange ;
+    rdfs:label "changes in chemical constitution" ;
+    ndt:DETECTED_BY ex:node186 .
+
+ex:node186 a ndt:NDTMethod ;
+    rdfs:label "chemical analyses using spectroscopy" .
+
+ex:node187 a ndt:NDTMethod ;
+    rdfs:label "classical microscopic methods" .
+
+ex:node188 a ndt:NDTMethod ;
+    rdfs:label "strain measurements" .
+
+ex:node189 a ndt:NDTMethod ;
+    rdfs:label "colour measurements" .
+
+ex:node190 a ndt:NDTMethod ;
+    rdfs:label "delamination surveys" .
+
+ex:node195 a ndt:DeteriorationMechanism ;
+    rdfs:label "oxidation" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node165,
+        ex:node166,
+        ex:node168,
+        ex:node192,
+        ex:node193,
+        ex:node194 .
+
+ex:node197 a ndt:DeteriorationMechanism ;
+    rdfs:label "mechanical load" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node165,
+        ex:node166,
+        ex:node168,
+        ex:node192,
+        ex:node193,
+        ex:node194 .
+
+ex:node199 a ndt:DeteriorationMechanism ;
+    rdfs:label "moisture content" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node165,
+        ex:node166,
+        ex:node168,
+        ex:node192,
+        ex:node193,
+        ex:node194 .
+
+ex:node201 a ndt:DeteriorationMechanism ;
+    rdfs:label "rot" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node165,
+        ex:node166,
+        ex:node168,
+        ex:node192,
+        ex:node193,
+        ex:node194 .
+
+ex:node203 a ndt:DeteriorationMechanism ;
+    rdfs:label "knots" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node165,
+        ex:node166,
+        ex:node168,
+        ex:node192,
+        ex:node193,
+        ex:node194 .
+
+ex:node205 a ndt:DeteriorationMechanism ;
+    rdfs:label "delamination" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node165,
+        ex:node166,
+        ex:node168,
+        ex:node192,
+        ex:node193,
+        ex:node194 .
+
+ex:node206 a ndt:NDTMethod ;
+    rdfs:label "radiography" .
+
+ex:node207 a ndt:NDTMethod ;
+    rdfs:label "neutron imaging" .
+
+ex:node208 a ndt:NDTMethod ;
+    rdfs:label "near-infrared spectroscopy" .
+
+ex:node209 a ndt:DeteriorationMechanism ;
+    rdfs:label "salt crystallization" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node113,
+        ex:node115,
+        ex:node153,
+        ex:node211 .
+
+ex:node210 a ndt:DeteriorationMechanism ;
+    rdfs:label "weathering" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node113,
+        ex:node115,
+        ex:node153,
+        ex:node211 .
+
+ex:node213 a ndt:NDTMethod ;
+    rdfs:label "moisture meters" .
+
+ex:node4 a ndt:Deterioration ;
+    rdfs:label "Cracking" ;
+    ndt:DETECTED_BY ex:node2,
+        ex:node9 .
+
+ex:node5 a ndt:Deterioration ;
+    rdfs:label "Delamination" ;
+    ndt:DETECTED_BY ex:node10 .
+
+ex:node6 a ndt:Environment ;
+    rdfs:label "Dry" .
+
+ex:node8 a ndt:Environment ;
+    rdfs:label "High Temperature" .
+
+ex:node9 a ndt:NDTMethod ;
+    rdfs:label "GPR" ;
+    ndt:REQUIRES_ENVIRONMENT ex:node1 .
+
+ex:node1 a ndt:Environment ;
+    rdfs:label "Humid" .
+
+ex:node10 a ndt:NDTMethod ;
+    rdfs:label "Acoustic Emission" ;
+    ndt:REQUIRES_ENVIRONMENT ex:node6 .
+
+ex:node112 a ndt:DeteriorationMechanism ;
+    rdfs:label "corrosion" ;
+    ndt:CAUSES_PHYSICAL_CHANGE ex:node113,
+        ex:node115,
+        ex:node117,
+        ex:node144,
+        ex:node145,
+        ex:node150,
+        ex:node152,
+        ex:node153 .
+
+ex:node135 a ndt:NDTMethod ;
+    rdfs:label "half-cell potential test" .
+
+ex:node138 a ndt:NDTMethod ;
+    rdfs:label "acoustic techniques" .
+
+ex:node145 a ndt:PhysicalChange ;
+    rdfs:label "pitting" ;
+    ndt:DETECTED_BY ex:node116,
+        ex:node146,
+        ex:node148,
+        ex:node154,
+        ex:node155,
+        ex:node156,
+        ex:node160,
+        ex:node161 .
+
+ex:node151 a ndt:NDTMethod ;
+    rdfs:label "visual testing" .
+
+ex:node162 a ndt:NDTMethod ;
+    rdfs:label "acoustic emission testing" .
+
+ex:node173 a ndt:PhysicalChange ;
+    rdfs:label "crack formation" ;
+    ndt:DETECTED_BY ex:node114 .
+
+ex:node176 a ndt:PhysicalChange ;
+    rdfs:label "changes in mechanical parameters" ;
+    ndt:DETECTED_BY ex:node114,
+        ex:node154,
+        ex:node182 .
+
+ex:node179 a ndt:NDTMethod ;
+    rdfs:label "computed tomography" .
+
+ex:node184 a ndt:NDTMethod ;
+    rdfs:label "thermography" .
+
+ex:node211 a ndt:PhysicalChange ;
+    rdfs:label "efflorescence" ;
+    ndt:DETECTED_BY ex:node114,
+        ex:node116,
+        ex:node118,
+        ex:node213 .
+
+ex:node212 a ndt:NDTMethod ;
+    rdfs:label "impact-echo testing" .
+
+ex:node124 a ndt:NDTMethod ;
+    rdfs:label "half-cell potential measurement" .
+
+ex:node125 a ndt:NDTMethod ;
+    rdfs:label "ultrasonic pulse velocity" .
+
+ex:node126 a ndt:NDTMethod ;
+    rdfs:label "permeation test" .
+
+ex:node128 a ndt:NDTMethod ;
+    rdfs:label "resonant frequency methods" .
+
+ex:node132 a ndt:PhysicalChange ;
+    rdfs:label "delamination" ;
+    ndt:DETECTED_BY ex:node114,
+        ex:node130 .
+
+ex:node134 a ndt:NDTMethod ;
+    rdfs:label "chloride-ion permeability test" .
+
+ex:node150 a ndt:PhysicalChange ;
+    rdfs:label "changes in microstructure" ;
+    ndt:DETECTED_BY ex:node116,
+        ex:node146,
+        ex:node148,
+        ex:node151,
+        ex:node160,
+        ex:node161,
+        ex:node163 .
+
+ex:node155 a ndt:NDTMethod ;
+    rdfs:label "x-radiography" .
+
+ex:node156 a ndt:NDTMethod ;
+    rdfs:label "laser-based technique" .
+
+ex:node161 a ndt:NDTMethod ;
+    rdfs:label "radiographic inspection" .
+
+ex:node2 a ndt:NDTMethod ;
+    rdfs:label "Ultrasonic Testing" ;
+    ndt:REQUIRES_ENVIRONMENT ex:node1 .
+
+ex:node130 a ndt:NDTMethod ;
+    rdfs:label "impact-echo method" .
+
+ex:node152 a ndt:PhysicalChange ;
+    rdfs:label "changes in mechanical properties" ;
+    ndt:DETECTED_BY ex:node116,
+        ex:node146,
+        ex:node148,
+        ex:node154,
+        ex:node158,
+        ex:node160,
+        ex:node161,
+        ex:node162 .
+
+ex:node118 a ndt:NDTMethod ;
+    rdfs:label "infrared thermography" .
+
+ex:node153 a ndt:PhysicalChange ;
+    rdfs:label "dimensional changes" ;
+    ndt:DETECTED_BY ex:node114,
+        ex:node116,
+        ex:node118,
+        ex:node146,
+        ex:node148,
+        ex:node154,
+        ex:node160,
+        ex:node162 .
+
+ex:node146 a ndt:NDTMethod ;
+    rdfs:label "eddy current testing" .
+
+ex:node148 a ndt:NDTMethod ;
+    rdfs:label "radiographic testing" .
+
+ex:node160 a ndt:NDTMethod ;
+    rdfs:label "acoustic emissions" .
+
+ex:node191 a ndt:NDTMethod ;
+    rdfs:label "X-ray/synchrotron" .
+
+ex:node196 a ndt:NDTMethod ;
+    rdfs:label "Colour measurement/gloss level" .
+
+ex:node198 a ndt:NDTMethod ;
+    rdfs:label "Optical imaging methods (video image correlation)" .
+
+ex:node200 a ndt:NDTMethod ;
+    rdfs:label "Moisture measurement" .
+
+ex:node202 a ndt:NDTMethod ;
+    rdfs:label "Electric resistance measurements" .
+
+ex:node154 a ndt:NDTMethod ;
+    rdfs:label "acoustic emission" .
+
+ex:node192 a ndt:PhysicalChange ;
+    rdfs:label "mechanical parameters" ;
+    ndt:DETECTED_BY ex:node184,
+        ex:node191,
+        ex:node196,
+        ex:node198,
+        ex:node200,
+        ex:node202,
+        ex:node204 .
+
+ex:node117 a ndt:PhysicalChange ;
+    rdfs:label "discoloration" ;
+    ndt:DETECTED_BY ex:node114,
+        ex:node118,
+        ex:node124,
+        ex:node125,
+        ex:node126,
+        ex:node128,
+        ex:node134 .
+
+ex:node166 a ndt:PhysicalChange ;
+    rdfs:label "changes in material macro- & microstructure" ;
+    ndt:DETECTED_BY ex:node116,
+        ex:node179,
+        ex:node180,
+        ex:node181,
+        ex:node184,
+        ex:node187,
+        ex:node189,
+        ex:node191,
+        ex:node196,
+        ex:node198,
+        ex:node200,
+        ex:node202,
+        ex:node204 .
+
+ex:node168 a ndt:PhysicalChange ;
+    rdfs:label "discontinuity of material" ;
+    ndt:DETECTED_BY ex:node114,
+        ex:node154,
+        ex:node191,
+        ex:node196,
+        ex:node198,
+        ex:node200,
+        ex:node202,
+        ex:node204,
+        ex:node206 .
+
+ex:node193 a ndt:PhysicalChange ;
+    rdfs:label "water & gas resistance" ;
+    ndt:DETECTED_BY ex:node191,
+        ex:node196,
+        ex:node198,
+        ex:node200,
+        ex:node202,
+        ex:node204,
+        ex:node207 .
+
+ex:node194 a ndt:PhysicalChange ;
+    rdfs:label "chemical constitution" ;
+    ndt:DETECTED_BY ex:node191,
+        ex:node196,
+        ex:node198,
+        ex:node200,
+        ex:node202,
+        ex:node204,
+        ex:node208 .
+
+ex:node204 a ndt:NDTMethod ;
+    rdfs:label "Thermography" ;
+    ndt:REQUIRES_ENVIRONMENT ex:node8 .
+
+ex:node165 a ndt:PhysicalChange ;
+    rdfs:label "changes in structure geometry" ;
+    ndt:DETECTED_BY ex:node114,
+        ex:node116,
+        ex:node154,
+        ex:node179,
+        ex:node183,
+        ex:node188,
+        ex:node190,
+        ex:node191,
+        ex:node196,
+        ex:node198,
+        ex:node200,
+        ex:node202,
+        ex:node204 .
+
+ex:node116 a ndt:NDTMethod ;
+    rdfs:label "ultrasonic testing" .
+
+ex:node114 a ndt:NDTMethod ;
+    rdfs:label "visual inspection" .
+
+ex:node115 a ndt:PhysicalChange ;
+    rdfs:label "spalling" ;
+    ndt:DETECTED_BY ex:node114,
+        ex:node116,
+        ex:node118,
+        ex:node124,
+        ex:node125,
+        ex:node126,
+        ex:node128,
+        ex:node130,
+        ex:node134,
+        ex:node135,
+        ex:node138,
+        ex:node139,
+        ex:node141,
+        ex:node143,
+        ex:node212 .
+
+ex:node113 a ndt:PhysicalChange ;
+    rdfs:label "cracking" ;
+    ndt:DETECTED_BY ex:node114,
+        ex:node116,
+        ex:node118,
+        ex:node124,
+        ex:node125,
+        ex:node126,
+        ex:node128,
+        ex:node130,
+        ex:node134,
+        ex:node135,
+        ex:node138,
+        ex:node140,
+        ex:node142,
+        ex:node146,
+        ex:node148,
+        ex:node151,
+        ex:node154,
+        ex:node155,
+        ex:node156,
+        ex:node159,
+        ex:node160,
+        ex:node212 .
+
