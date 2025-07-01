@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+import time
 
 project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root))  
@@ -242,7 +243,12 @@ with st.sidebar:
     """)
 
 # Main content organized in tabs
-tab1, tab2, tab3 = st.tabs(["🗣️ Natural Language Planner", "📎 Structured Planner", "🔍 Knowledge Graph Explorer"])
+tab1, tab2, tab3, tab4 = st.tabs([
+    "🗣️ Natural Language Planner", 
+    "📎 Structured Planner", 
+    "🔍 Knowledge Graph Explorer", 
+    "📚 Ontology Builder"
+])
 
 # ------------------- TAB 1: LLM Planner -------------------
 with tab1:
@@ -464,6 +470,68 @@ with tab3:
                 """, unsafe_allow_html=True)
         else:
             st.info("No relationships found. Try seeding first.")
+
+# ------------------- TAB 4: Ontology Builder -------------------
+from agents.ontology_agent import OntologyBuilderAgent
+
+with tab4:
+    st.markdown("""
+    <div class="dashboard-card">
+        <h3>📚 Ontology Builder</h3>
+        <p>Generate OWL axioms from competency questions using a local Ollama-powered LLM.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    cq_input = st.text_area("✍️ Enter one or more competency questions (one per line):", height=150)
+    uploaded_file = st.file_uploader("📄 Or upload a .txt file", type=["txt"])
+
+    cqs = []
+    if uploaded_file:
+        lines = uploaded_file.read().decode("utf-8").splitlines()
+        cqs = [line.strip() for line in lines if line.strip()]
+    elif cq_input.strip():
+        cqs = [line.strip() for line in cq_input.split("\n") if line.strip()]
+
+    if st.button("🔁 Run Ontology Builder"):
+        if not cqs:
+            st.warning("Please input or upload at least one question.")
+        else:
+            loop = st.session_state.loop
+            agent = OntologyBuilderAgent()
+            results = []
+            latencies = []
+
+            with st.spinner("Running LLM for all CQs..."):
+                for cq in cqs:
+                    start = time.time()
+                    try:
+                        axiom = loop.run_until_complete(agent.run(cq))
+                        results.append((cq, axiom))
+                        latencies.append(time.time() - start)
+                    except Exception as e:
+                        results.append((cq, f"# ERROR: {str(e)}"))
+                        latencies.append(0)
+
+            for i, (cq, axiom) in enumerate(results, start=1):
+                st.markdown(f"### CQ {i}: {cq}")
+                st.code(axiom.strip(), language="markdown")
+
+            if results:
+                avg_latency = sum(latencies) / len(latencies)
+                st.success(f"✅ Done! Avg generation time: {avg_latency:.2f}s")
+
+            if st.button("💾 Export Results"):
+                import datetime
+                from pathlib import Path
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                out_path = Path("outputs/ontology/")
+                out_path.mkdir(parents=True, exist_ok=True)
+                file_path = out_path / f"ontology_output_{timestamp}.ttl"
+                with open(file_path, "w", encoding="utf-8") as f:
+                    for cq, axiom in results:
+                        f.write(f"# CQ: {cq}\n{axiom}\n\n")
+                st.success(f"Ontology saved to {file_path}")
+         
     
     # Direct Cypher query capability for advanced users
     st.markdown("""

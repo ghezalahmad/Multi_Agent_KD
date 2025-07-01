@@ -1,0 +1,4 @@
+Which NDT methods detect corrosion in steel structures in humid environments?
+What sensors can identify cracks in concrete walls?
+What inspection tools are appropriate for wooden beams with delamination?
+What environmental conditions affect the performance of acoustic emission sensors?

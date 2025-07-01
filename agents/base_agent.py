@@ -15,9 +15,16 @@ class BaseAgent:
         self.system_prompt = system_prompt
         self.history = [SystemMessage(content=system_prompt)]
 
+
+
     async def __call__(self, user_msg: str) -> str:
         self.history.append(HumanMessage(content=user_msg))
-        response = await self.llm.agenerate([self.history])
-        msg = response.generations[0][0].text
-        self.history.append(AIMessage(content=msg))
-        return msg
+        try:
+            response = await self.llm.agenerate([self.history])
+            msg = response.generations[0][0].text
+            print("🧠 Response from LLM:", msg)  # DEBUG
+            self.history.append(AIMessage(content=msg))
+            return msg.strip()
+        except Exception as e:
+            print("❌ LLM failed:", str(e))
+            return "# ERROR: LLM call failed"
