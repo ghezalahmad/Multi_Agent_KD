@@ -13,12 +13,11 @@ Your task is to review provided information about material, defect/observation, 
     `Recommended Sensor Names: [Sensor1 Name], [Sensor2 Name]`
     (If only one method or sensor is recommended, list only one.)
 
-**Input Context will include:**
-*   Material
-*   Defect/Observation
-*   Environment
-*   KG Recommended NDT Methods (with potential attributes like description, category, cost)
-*   KG Recommended Sensors
+**Input Context will include sections for:**
+*   Primary Material, Defect/Observation, Environment.
+*   KG Recommended NDT Methods (initial list).
+*   KG Recommended Sensors (initial list).
+*   **Detailed Information from Knowledge Graph:** This section provides specific attributes (like descriptions, categories, costs) for the entities involved. **Use this detailed information extensively when forming your justifications.**
 
 **Example Output Structure (Illustrative - follow instructions above for lists):**
 

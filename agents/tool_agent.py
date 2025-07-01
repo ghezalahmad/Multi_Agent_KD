@@ -64,26 +64,39 @@ Output: {"material": "Steel", "defect": "Corrosion", "environment": "wet"}
 
         # Step 2: Use extracted entities with the existing structured logic
         # This part is similar to run_structured, but uses the extracted entities
-        methods = self.kg.recommend_ndt_methods(material, defect, environment)
-        sensors = self.kg.recommend_sensors(defect) # Assuming defect is the primary key for sensors
+        # Initial KG recommendations (just names)
+        recommended_method_names = self.kg.recommend_ndt_methods(material, defect, environment)
+        recommended_sensor_names = self.kg.recommend_sensors(defect) # Assuming defect is the primary key for sensors
 
-        method_text = "\n".join([f"- {m}" for m in methods]) or "No suitable NDT methods found in KG for extracted entities."
-        sensor_text = "\n".join([f"- {s}" for s in sensors]) or "No recommended sensors found in KG for extracted defect."
+        method_names_text = "\n".join([f"- {m}" for m in recommended_method_names]) or "No suitable NDT methods found in KG for extracted entities."
+        sensor_names_text = "\n".join([f"- {s}" for s in recommended_sensor_names]) or "No recommended sensors found in KG for extracted defect."
 
-        # Step 3: Pass KG recommendations and extracted entities to the main LLM prompt
-        # The main prompt for ToolSelectorAgent (in prompts/tool_selector.txt) expects material, defect, environment context.
-        context_for_main_prompt = (
+        # Step 3: RAG - Retrieve detailed context from KG
+        retrieved_rag_context = self.kg.get_entities_details_for_rag(
+            material_name=material,
+            defect_name=defect,
+            method_names=recommended_method_names
+        )
+
+        # Step 4: Construct the full context for the LLM
+        context_for_llm = (
+            f"--- Primary Context ---\n"
             f"Material: {material}\n"
             f"Defect/Observation: {defect}\n"
             f"Environment: {environment}\n\n"
-            f"KG Recommended NDT Methods based on these entities:\n{method_text}\n\n"
-            f"KG Recommended Sensor Prioritization based on these entities:\n{sensor_text}\n\n"
-            f"Based on the above information extracted from an initial plan and queried from the Knowledge Graph, "
-            f"please summarize the best NDT methods and recommend top 1-2 sensors, explaining why they are appropriate."
+            f"--- Initial KG Recommendations ---\n"
+            f"Recommended NDT Method Names:\n{method_names_text}\n\n"
+            f"Recommended Sensor Names:\n{sensor_names_text}\n\n"
+            f"--- Detailed Information from Knowledge Graph (for RAG) ---\n"
+            f"{retrieved_rag_context}\n\n"
+            f"--- Task ---\n"
+            f"Based on all the above information (Primary Context, Initial KG Recommendations, and Detailed Information from KG), "
+            f"please summarize the best NDT methods and recommend top 1-2 sensors, explaining why they are appropriate. "
+            f"Remember to include the specially formatted lists 'Recommended Method Names: [...]' and 'Recommended Sensor Names: [...]' in your output."
         )
 
         # This call uses the agent's actual system prompt and history
-        raw_llm_output = await self(context_for_main_prompt)
+        raw_llm_output = await self(context_for_llm)
 
         # Parse recommended methods and sensors from the raw_llm_output
         recommended_methods = self._parse_list_from_llm_output(raw_llm_output, "Recommended Method Names:")

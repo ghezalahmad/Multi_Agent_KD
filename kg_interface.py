@@ -196,3 +196,52 @@ class KGInterface:
             "feedback_text": feedback_text
         })
         print(f"Feedback logged for plan ID: {plan_id}. Helpful: {is_helpful}")
+
+    def get_entities_details_for_rag(self, material_name: str = None, defect_name: str = None, method_names: list[str] = None) -> str:
+        """
+        Fetches details for specified material, defect (name only for now), and NDT methods
+        to be used as context for Retrieval Augmented Generation.
+        """
+        context_parts = []
+
+        if material_name:
+            query_material = """
+            MATCH (m:Material {name: $material_name})
+            RETURN m.description AS description, m.commonApplications AS commonApplications
+            LIMIT 1
+            """
+            material_details = self.cypher(query_material, {"material_name": material_name})
+            if material_details and material_details[0]:
+                md = material_details[0]
+                context_parts.append(f"--- Material: {material_name} ---")
+                if md.get("description"):
+                    context_parts.append(f"Description: {md['description']}")
+                if md.get("commonApplications"):
+                    context_parts.append(f"Common Applications: {md['commonApplications']}")
+
+        if defect_name: # For now, just including the defect name for context
+            context_parts.append(f"--- Defect/Observation of Concern: {defect_name} ---")
+
+        if method_names:
+            context_parts.append("--- NDT Method Details ---")
+            for method_name in method_names:
+                query_method = """
+                MATCH (n:NDTMethod {name: $method_name})
+                RETURN n.description AS description, n.costEstimate AS costEstimate, n.methodCategory AS methodCategory
+                LIMIT 1
+                """
+                method_details = self.cypher(query_method, {"method_name": method_name})
+                if method_details and method_details[0]:
+                    m_details = method_details[0]
+                    context_parts.append(f"Method: {method_name}")
+                    if m_details.get("description"):
+                        context_parts.append(f"  Description: {m_details['description']}")
+                    if m_details.get("methodCategory"):
+                        context_parts.append(f"  Category: {m_details['methodCategory']}")
+                    if m_details.get("costEstimate"):
+                        context_parts.append(f"  Cost Estimate: {m_details['costEstimate']}")
+
+        if not context_parts:
+            return "No specific details found in KG for the provided entities."
+
+        return "\n".join(context_parts)
