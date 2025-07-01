@@ -103,3 +103,36 @@ class KGInterface:
         query = "MATCH (e:Environment) RETURN DISTINCT e.name AS name ORDER BY name"
         return [r["name"] for r in self.cypher(query)]
 
+    def log_plan_feedback(self, plan_identifier: str, is_helpful: bool, feedback_text: str = None) -> None:
+        """
+        Logs user feedback about an inspection plan.
+        'plan_identifier' can be the forecast text or a hash of it for now.
+        """
+        query = """
+        MERGE (ip:InspectionPlan {text: $plan_identifier}) // Try to link to existing plan by its text content
+        ON CREATE SET ip.timestamp = datetime() // Set timestamp if we're creating it here
+
+        CREATE (f:Feedback {
+            is_helpful: $is_helpful,
+            comment: $feedback_text,
+            timestamp: datetime(),
+            plan_ref_text: $plan_identifier // Storing the identifier text directly on feedback node
+        })
+        CREATE (f)-[:REFERS_TO_PLAN]->(ip)
+        """
+        # Note: A more robust way would be to ensure InspectionPlan nodes have unique IDs and link via that ID.
+        # For now, using plan_identifier (e.g., forecast text) as a simple linking key.
+        # If InspectionPlan nodes are already created with unique IDs by log_inspection_plan,
+        # we would ideally pass that ID here instead of the full text.
+
+        # For the MERGE on InspectionPlan, if it has other properties like material, defect, env
+        # that are known when feedback is given, those could be added to the MERGE to make it more specific,
+        # or ensure log_inspection_plan is always called first.
+        # The current MERGE will create a new InspectionPlan if one with that exact text doesn't exist.
+
+        self.cypher(query, {
+            "plan_identifier": plan_identifier,
+            "is_helpful": is_helpful,
+            "feedback_text": feedback_text
+        })
+        print(f"Feedback logged for plan identifier: {plan_identifier[:50]}... Helpful: {is_helpful}")

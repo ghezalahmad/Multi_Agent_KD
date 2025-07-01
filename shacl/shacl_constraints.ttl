@@ -46,6 +46,12 @@ ndt:DeteriorationShape a sh:NodeShape ;
         sh:minCount 1 ;
         sh:maxCount 1 ;
         sh:message "Deterioration must have exactly one ndt:name." ;
+    ] ;
+    sh:property [ # Added to ensure detectedBy links to an NDTMethod IRI
+        sh:path ndt:detectedBy ;
+        sh:nodeKind sh:IRI ;
+        sh:class ndt:NDTMethod ;
+        sh:message "Deterioration's detectedBy must be an IRI linking to an NDTMethod." ;
     ] .
 
 #################################
@@ -59,6 +65,12 @@ ndt:DeteriorationMechanismShape a sh:NodeShape ;
         sh:minCount 1 ;
         sh:maxCount 1 ;
         sh:message "DeteriorationMechanism must have exactly one ndt:name." ;
+    ] ;
+    sh:property [ # Added to ensure causesPhysicalChange links to a PhysicalChange IRI
+        sh:path ndt:causesPhysicalChange ;
+        sh:nodeKind sh:IRI ;
+        sh:class ndt:PhysicalChange ;
+        sh:message "DeteriorationMechanism's causesPhysicalChange must be an IRI linking to a PhysicalChange." ;
     ] .
 
 #########################
@@ -72,6 +84,12 @@ ndt:PhysicalChangeShape a sh:NodeShape ;
         sh:minCount 1 ;
         sh:maxCount 1 ;
         sh:message "PhysicalChange must have exactly one ndt:name." ;
+    ] ;
+    sh:property [ # Added to ensure detectedBy links to an NDTMethod IRI
+        sh:path ndt:detectedBy ;
+        sh:nodeKind sh:IRI ;
+        sh:class ndt:NDTMethod ;
+        sh:message "PhysicalChange's detectedBy must be an IRI linking to an NDTMethod." ;
     ] .
 
 #######################
@@ -98,16 +116,23 @@ ndt:NDTMethodShape a sh:NodeShape ;
         sh:datatype xsd:string ;
         sh:minCount 0 ;
         sh:maxCount 1 ;
-        sh:in ( "Low" "Medium" "High" ) ; # Optional: Enforce enum values
-        sh:message "NDTMethod cost estimate should be 'Low', 'Medium', or 'High'." ;
+        sh:in ( "Low" "Medium" "High" ) ;
+        sh:message "NDTMethod cost estimate must be 'Low', 'Medium', or 'High'." ;
     ] ;
     sh:property [
         sh:path ndt:methodCategory ;
         sh:datatype xsd:string ;
         sh:minCount 0 ;
         sh:maxCount 1 ;
-        sh:in ( "Surface" "Volumetric" "Compositional" "Other" ) ; # Optional: Enforce enum values
-        sh:message "NDTMethod category should be 'Surface', 'Volumetric', 'Compositional', or 'Other'." ;
+        sh:in ( "Surface" "Volumetric" "Compositional" "Other" ) ;
+        sh:message "NDTMethod category must be 'Surface', 'Volumetric', 'Compositional', or 'Other'." ;
+    ] ;
+    sh:property [ # Added to ensure requiresEnvironment links to an Environment IRI
+        sh:path ndt:requiresEnvironment ;
+        sh:nodeKind sh:IRI ;
+        sh:class ndt:Environment ;
+        sh:minCount 0 ; # A method might not always have a specific environment requirement listed
+        sh:message "NDTMethod's requiresEnvironment must be an IRI linking to an Environment." ;
     ] .
 
 #######################
@@ -121,6 +146,12 @@ ndt:SensorShape a sh:NodeShape ;
         sh:minCount 1 ;
         sh:maxCount 1 ;
         sh:message "Sensor must have exactly one ndt:name." ;
+    ] ;
+    sh:property [ # Added to ensure recommendedFor links to an NDTMethod IRI
+        sh:path ndt:recommendedFor ;
+        sh:nodeKind sh:IRI ;
+        sh:class ndt:NDTMethod ;
+        sh:message "Sensor's recommendedFor must be an IRI linking to an NDTMethod." ;
     ] .
 
 #######################

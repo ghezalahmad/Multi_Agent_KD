@@ -12,25 +12,26 @@ class KGAugmentor:
     def propose_fact(self, material, defect, method, confidence=0.8, source="LLM inference"):
         """
         Propose a new material-defect-method fact to the KG, if it does not already exist.
+        The 'defect' parameter will be treated as the name for a 'Deterioration' node.
         """
         query_check = """
-        MATCH (m:Material {name: $material})-[:HAS_DEFECT]->(d:Defect {name: $defect})
-              -[:DETECTED_BY]->(n:NDTMethod {name: $method})
+        MATCH (m:Material {name: $material})-[:hasDeteriorationMechanism]->(d:Deterioration {name: $defect_name})
+        MATCH (d)-[:detectedBy]->(n:NDTMethod {name: $method_name})
         RETURN m, d, n
         """
 
         query_create = """
-        MERGE (m:Material {name: $material})
-        MERGE (d:Defect {name: $defect})
-        MERGE (n:NDTMethod {name: $method})
-        MERGE (m)-[:HAS_DEFECT]->(d)
-        MERGE (d)-[:DETECTED_BY]->(n)
+        MERGE (m:Material {name: $material_name})
+        MERGE (d:Deterioration {name: $defect_name}) // Create/merge as Deterioration
+        MERGE (n:NDTMethod {name: $method_name})
+        MERGE (m)-[r1:hasDeteriorationMechanism]->(d) // Use ontology-aligned relationship
+        MERGE (d)-[r2:detectedBy]->(n) // Use ontology-aligned relationship
 
         CREATE (p:ProposedFact {
-            id: $id,
-            material: $material,
-            defect: $defect,
-            method: $method,
+            factId: $id, // Aligned with ontology
+            proposedMaterialName: $material_name, // Aligned with ontology
+            proposedDefectName: $defect_name, // Aligned with ontology
+            methodName: $method_name, // Aligned with ontology
             source: $source,
             confidence: $confidence,
             status: "pending"

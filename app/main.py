@@ -314,6 +314,68 @@ with tab1:
         """, unsafe_allow_html=True)
         st.code(forecast, language="markdown")
 
+        # --- Interactive Refinement for Tab 1 ---
+        st.markdown("---")
+        st.markdown("#### Focused Deterioration Forecast")
+
+        # Simple parsing of NDT methods from ToolSelectorAgent output (tools string)
+        # This assumes methods are listed like "*   **[NDT Method Name]:**..."
+        import re
+        recommended_methods_tab1 = []
+        if tools: # 'tools' is the output from ToolSelectorAgent
+            method_matches = re.findall(r"\* \s*\*\*(.*?):\*\*", tools, re.IGNORECASE)
+            if method_matches:
+                recommended_methods_tab1 = [m.strip() for m in method_matches]
+
+        if not recommended_methods_tab1 and tools: # Fallback if primary parsing fails
+            lines = tools.split('\n')
+            for line in lines:
+                if line.strip().startswith("*") and ":" in line:
+                    method_name = line.split(":")[0].replace("*","").strip()
+                    if method_name and len(method_name) > 2: # Basic sanity check
+                         recommended_methods_tab1.append(method_name)
+            recommended_methods_tab1 = list(set(recommended_methods_tab1)) # Unique
+
+        if recommended_methods_tab1:
+            selected_methods_tab1 = st.multiselect(
+                "Select NDT Method(s) for Focused Forecast:",
+                options=recommended_methods_tab1,
+                key="focused_select_tab1"
+            )
+            if st.button("Re-run Forecast for Selected", key="rerun_forecast_tab1"):
+                if selected_methods_tab1:
+                    focused_context_tab1 = (
+                        f"Focusing on NDT methods: {', '.join(selected_methods_tab1)}.\n"
+                        f"Original user query: {user_input}\n"
+                        f"Initial plan context: {plan}\n"
+                        f"Tool selection context: {tools}"
+                    )
+                    with st.spinner("ForecasterAgent running focused forecast..."):
+                        focused_forecast_tab1 = loop.run_until_complete(st.session_state.fore.run(focused_context_tab1))
+                        st.markdown("##### Focused Forecast Results:")
+                        st.code(focused_forecast_tab1, language="markdown")
+                else:
+                    st.warning("Please select at least one NDT method for focused forecast.")
+        else:
+            st.info("No specific NDT methods identified from the previous step to allow focused forecast.")
+
+        # --- User Feedback for Tab 1 ---
+        if forecast: # Check if forecast exists before showing feedback buttons
+            st.markdown("---")
+            st.markdown("##### Was this plan helpful?")
+            fb_col1_t1, fb_col2_t1 = st.columns(2)
+            with fb_col1_t1:
+                if st.button("👍 Yes", key="helpful_tab1", use_container_width=True):
+                    KGInterface().log_plan_feedback(plan_identifier=forecast, is_helpful=True)
+                    st.toast("🙏 Thank you for your feedback!", icon="👍")
+            with fb_col2_t1:
+                if st.button("👎 No", key="unhelpful_tab1", use_container_width=True):
+                    KGInterface().log_plan_feedback(plan_identifier=forecast, is_helpful=False)
+                    st.toast("🙏 Thank you! Your feedback helps us improve.", icon="💡")
+        # --- End User Feedback ---
+        # --- End Interactive Refinement ---
+
+
 # ------------------- TAB 2: KG-Driven Structured Planner -------------------
 with tab2:
     st.markdown("""
@@ -381,6 +443,68 @@ with tab2:
                 st.text(forecast)
                 render_forecast_chart(forecast)
                 render_gantt_chart(forecast)
+
+                # --- Interactive Refinement for Tab 2 ---
+                st.markdown("---")
+                st.markdown("#### Focused Deterioration Forecast")
+
+                # Simple parsing of NDT methods from ToolSelectorAgent output (variable 'plan' in this tab)
+                import re
+                recommended_methods_tab2 = []
+                if plan: # 'plan' is the output from ToolSelectorAgent.run_structured()
+                    method_matches_tab2 = re.findall(r"\* \s*\*\*(.*?):\*\*", plan, re.IGNORECASE)
+                    if method_matches_tab2:
+                        recommended_methods_tab2 = [m.strip() for m in method_matches_tab2]
+
+                if not recommended_methods_tab2 and plan: # Fallback
+                    lines = plan.split('\n')
+                    for line in lines:
+                        if line.strip().startswith("*") and ":" in line:
+                            method_name = line.split(":")[0].replace("*","").strip()
+                            if method_name and len(method_name) > 2:
+                                 recommended_methods_tab2.append(method_name)
+                    recommended_methods_tab2 = list(set(recommended_methods_tab2))
+
+
+                if recommended_methods_tab2:
+                    selected_methods_tab2 = st.multiselect(
+                        "Select NDT Method(s) for Focused Forecast:",
+                        options=recommended_methods_tab2,
+                        key="focused_select_tab2"
+                    )
+                    if st.button("Re-run Forecast for Selected", key="rerun_forecast_tab2"):
+                        if selected_methods_tab2:
+                            # Construct context similar to how it was built for the initial forecast in this tab
+                            focused_context_tab2 = (
+                                f"Focusing on NDT methods: {', '.join(selected_methods_tab2)}.\n"
+                                f"Original context: Material: {material}, Defect: {deterioration}, Environment: {environment}"
+                            )
+                            with st.spinner("ForecasterAgent running focused forecast..."):
+                                focused_forecast_tab2 = loop.run_until_complete(st.session_state.fore.run(focused_context_tab2))
+                                st.markdown("##### Focused Forecast Results:")
+                                st.code(focused_forecast_tab2, language="markdown")
+                                render_forecast_chart(focused_forecast_tab2) # Also render chart for new forecast
+                                render_gantt_chart(focused_forecast_tab2)
+                        else:
+                            st.warning("Please select at least one NDT method for focused forecast.")
+                else:
+                    st.info("No specific NDT methods identified from the previous step to allow focused forecast.")
+
+                # --- User Feedback for Tab 2 ---
+                if forecast: # Check if forecast exists before showing feedback buttons (forecast is defined in this scope)
+                    st.markdown("---")
+                    st.markdown("##### Was this plan helpful?")
+                    fb_col1_t2, fb_col2_t2 = st.columns(2)
+                    with fb_col1_t2:
+                        if st.button("👍 Yes", key="helpful_tab2", use_container_width=True):
+                            KGInterface().log_plan_feedback(plan_identifier=forecast, is_helpful=True)
+                            st.toast("🙏 Thank you for your feedback!", icon="👍")
+                    with fb_col2_t2:
+                        if st.button("👎 No", key="unhelpful_tab2", use_container_width=True):
+                            KGInterface().log_plan_feedback(plan_identifier=forecast, is_helpful=False)
+                            st.toast("🙏 Thank you! Your feedback helps us improve.", icon="💡")
+                # --- End User Feedback ---
+                # --- End Interactive Refinement ---
 
         with col2:
             st.markdown("""
