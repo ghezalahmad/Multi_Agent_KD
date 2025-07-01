@@ -144,11 +144,11 @@ class KGInterface:
     # --- 1️⃣ Update KGInterface.py ---
     # Add this function to KGInterface class
 
-    def log_inspection_plan(self, plan: str, material: str, defect: str, environment: str) -> str: # Changed return type
+    def log_inspection_plan(self, plan: str, material: str, defect: str, environment: str) -> str:
         plan_id = str(uuid.uuid4())
         query = """
         CREATE (i:InspectionPlan {
-            planID: $plan_id, // Added unique ID
+            planID: $plan_id,
             text: $plan,
             material: $material,
             defect: $defect,
@@ -157,11 +157,14 @@ class KGInterface:
         })
         """
         self.cypher(query, {
+            "plan_id": plan_id,  # ✅ added this line
             "plan": plan,
             "material": material,
             "defect": defect,
             "environment": environment
         })
+        return plan_id  # ✅ return the plan_id so you can reference it later
+
 
     def get_materials(self) -> List[str]:
         query = "MATCH (m:Material) RETURN DISTINCT m.name AS name ORDER BY name"

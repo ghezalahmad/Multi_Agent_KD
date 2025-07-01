@@ -285,7 +285,12 @@ with tab1:
         
         with st.spinner("PlannerAgent thinking..."):
             plan_agent_output_tab1 = loop.run_until_complete(st.session_state.plan.run(user_input))
+<<<<<<< HEAD
             plan_agent_output_tab1_html = plan_agent_output_tab1.replace('\n', '<br>')
+=======
+            # Resolved: Kept the version that correctly assigns to the _html variable
+            plan_agent_output_tab1_html = plan_agent_output_tab1.replace('\n', '<br>') 
+>>>>>>> main
             st.markdown(f"""
             <div class="agent-section planner-agent">
                 <h4>🧠 PlannerAgent</h4>
@@ -297,6 +302,10 @@ with tab1:
             tool_agent_output_tab1 = loop.run_until_complete(st.session_state.tools.run(plan_agent_output_tab1))
             tools_summary_tab1 = tool_agent_output_tab1.get("summary_text", "")
             recommended_methods_tab1_list = tool_agent_output_tab1.get("recommended_methods", [])
+<<<<<<< HEAD
+=======
+            # Resolved: Kept the version that correctly assigns to the _html variable
+>>>>>>> main
             tools_summary_tab1_html = tools_summary_tab1.replace('\n', '<br>')
             st.markdown(f"""
             <div class="agent-section tool-agent">
@@ -308,6 +317,10 @@ with tab1:
         forecast_text_tab1 = ""
         with st.spinner("ForecasterAgent running..."):
             forecast_text_tab1 = loop.run_until_complete(st.session_state.fore.run(tools_summary_tab1))
+<<<<<<< HEAD
+=======
+            # Resolved: Kept the version that correctly assigns to the _html variable
+>>>>>>> main
             forecast_text_tab1_html = forecast_text_tab1.replace('\n', '<br>')
             st.markdown(f"""
             <div class="agent-section forecaster-agent">
@@ -408,8 +421,9 @@ with tab2:
                 tool_agent_output_tab2 = loop.run_until_complete(
                     st.session_state.tools.run_structured(material, deterioration, environment)
                 )
-                plan_summary_tab2 = tool_agent_output_tab2.get("summary_text", "")
-                recommended_methods_tab2_list = tool_agent_output_tab2.get("recommended_methods", [])
+                plan_summary_tab2 = tool_agent_output_tab2
+                recommended_methods_tab2_list = []  # or extract methods from text if needed
+
 
                 st.markdown("""
                 <div class="dashboard-card">
