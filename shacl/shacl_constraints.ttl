@@ -19,6 +19,20 @@ ndt:MaterialShape a sh:NodeShape ;
         sh:path ndt:hasDeteriorationMechanism ;
         sh:nodeKind sh:IRI ;
         sh:message "Value of ndt:hasDeteriorationMechanism must be an IRI (linking to Deterioration or DeteriorationMechanism)." ;
+    ] ;
+    sh:property [
+        sh:path ndt:commonApplications ;
+        sh:datatype xsd:string ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ; # Assuming single string for list, adjust if modeling as multiple values
+        sh:message "Material common applications should be a string." ;
+    ] ;
+    sh:property [
+        sh:path ndt:description ;
+        sh:datatype xsd:string ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:message "Material description should be a string." ;
     ] .
 
 #########################
@@ -71,6 +85,29 @@ ndt:NDTMethodShape a sh:NodeShape ;
         sh:minCount 1 ;
         sh:maxCount 1 ;
         sh:message "NDTMethod must have exactly one ndt:name." ;
+    ] ;
+    sh:property [
+        sh:path ndt:description ;
+        sh:datatype xsd:string ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:message "NDTMethod description should be a string." ;
+    ] ;
+    sh:property [
+        sh:path ndt:costEstimate ;
+        sh:datatype xsd:string ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:in ( "Low" "Medium" "High" ) ; # Optional: Enforce enum values
+        sh:message "NDTMethod cost estimate should be 'Low', 'Medium', or 'High'." ;
+    ] ;
+    sh:property [
+        sh:path ndt:methodCategory ;
+        sh:datatype xsd:string ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:in ( "Surface" "Volumetric" "Compositional" "Other" ) ; # Optional: Enforce enum values
+        sh:message "NDTMethod category should be 'Surface', 'Volumetric', 'Compositional', or 'Other'." ;
     ] .
 
 #######################

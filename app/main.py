@@ -157,8 +157,11 @@ def seed_knowledge_graph():
     kg = KGInterface()
     seed_query = """
     MERGE (m:Material {name: "Concrete"})
+        SET m.commonApplications = "Buildings, Bridges, Foundations", m.description = "A composite material composed of fine and coarse aggregate bonded together with a fluid cement that hardens over time."
     MERGE (m2:Material {name: "Steel"})
+        SET m2.commonApplications = "Structural frames, Reinforcement, Pipelines", m2.description = "An alloy of iron and carbon, widely used in construction for its high tensile strength."
     MERGE (m3:Material {name: "Wood"})
+        SET m3.commonApplications = "Framing, Furniture, Decorative elements", m3.description = "A natural composite material, primarily composed of cellulose fibers."
 
     MERGE (d1:Deterioration {name: "Cracking"})
     MERGE (d2:Deterioration {name: "Corrosion"})
@@ -170,10 +173,15 @@ def seed_knowledge_graph():
     MERGE (e4:Environment {name: "High Temperature"})
 
     MERGE (n1:NDTMethod {name: "Ultrasonic Testing"})
+        SET n1.description = "Uses high-frequency sound waves to detect internal flaws and characterize material thickness.", n1.costEstimate = "Medium", n1.methodCategory = "Volumetric"
     MERGE (n2:NDTMethod {name: "GPR"})
+        SET n2.description = "Ground Penetrating Radar uses electromagnetic waves to image the subsurface.", n2.costEstimate = "High", n2.methodCategory = "Volumetric"
     MERGE (n3:NDTMethod {name: "Thermography"})
+        SET n3.description = "Infrared thermography detects temperature differences to find defects like delaminations or moisture.", n3.costEstimate = "Medium", n3.methodCategory = "Surface"
     MERGE (n4:NDTMethod {name: "Acoustic Emission"})
+        SET n4.description = "Passively listens for energy releases (acoustic emissions) from active cracks or defects under stress.", n4.costEstimate = "High", n4.methodCategory = "Volumetric"
     MERGE (n5:NDTMethod {name: "Visual Inspection"})
+        SET n5.description = "The oldest and most common NDT method, relying on direct observation of the material surface.", n5.costEstimate = "Low", n5.methodCategory = "Surface"
 
     MERGE (s1:Sensor {name: "Acoustic Sensor"})
     MERGE (s2:Sensor {name: "Thermal Camera"})

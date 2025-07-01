@@ -1,6 +1,8 @@
 from .base_agent import BaseAgent
 from kg_interface import KGInterface
 from pathlib import Path
+from langchain.schema import SystemMessage, HumanMessage # Added this import
+from langchain.schema import SystemMessage, HumanMessage # Added this import
 
 class ToolSelectorAgent(BaseAgent):
     def __init__(self):
@@ -26,6 +28,8 @@ Output: {"material": "Steel", "defect": "Corrosion", "environment": "wet"}
 """
 
         # Temporarily modify history for the extraction call
+        # Ensure SystemMessage and HumanMessage are available from langchain.schema
+        from langchain.schema import SystemMessage, HumanMessage # Explicit import inside method
         original_history = self.history.copy()
         self.history = [SystemMessage(content=extraction_prompt), HumanMessage(content=plan_text)]
 

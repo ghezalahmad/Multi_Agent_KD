@@ -78,6 +78,33 @@
     rdfs:range xsd:string ;
     rdfs:comment "Name of the environment recorded in an inspection plan." .
 
+###  http://example.org/ndt#commonApplications
+:commonApplications rdf:type owl:DatatypeProperty ;
+    rdfs:domain :Material ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A string listing common applications for the material (e.g., 'Buildings, Bridges, Foundations'). For multiple, use a delimited string or consider specific modeling for listsofStrings if platform supports." .
+
+###  http://example.org/ndt#costEstimate
+:costEstimate rdf:type owl:DatatypeProperty ;
+    rdfs:domain :NDTMethod ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Cost estimate for performing the NDT method. Enum: Low, Medium, High." .
+
+###  http://example.org/ndt#description
+:description rdf:type owl:DatatypeProperty ;
+    rdfs:domain [ rdf:type owl:Class ;
+            owl:unionOf ( :NDTMethod
+                          :Material
+                          :Deterioration
+                          :DeteriorationMechanism
+                          :PhysicalChange
+                          :Sensor
+                          :Environment
+                        )
+          ] ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A textual description of the entity." .
+
 ###  http://example.org/ndt#factId
 :factId rdf:type owl:DatatypeProperty ;
     rdfs:domain :ProposedFact ;
@@ -89,6 +116,12 @@
     rdfs:domain :InspectionPlan ;
     rdfs:range xsd:string ;
     rdfs:comment "Name of the material recorded in an inspection plan." .
+
+###  http://example.org/ndt#methodCategory
+:methodCategory rdf:type owl:DatatypeProperty ;
+    rdfs:domain :NDTMethod ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Category of the NDT method. Enum: Surface, Volumetric, Compositional, Other." .
 
 ###  http://example.org/ndt#methodName
 :methodName rdf:type owl:DatatypeProperty ;
