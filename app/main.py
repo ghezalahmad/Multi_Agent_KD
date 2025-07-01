@@ -438,6 +438,7 @@ with tab2:
                 Material: {material}
                 Defect: {deterioration}
                 Environment: {environment}
+                Recommended NDT Methods by ToolSelector: {', '.join(recommended_methods_tab2_list) if recommended_methods_tab2_list else "None specified"}
                 """
                 forecast_text_tab2 = loop.run_until_complete(st.session_state.fore.run(forecast_context_tab2_initial))
 
