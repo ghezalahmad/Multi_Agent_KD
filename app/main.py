@@ -164,7 +164,9 @@ def seed_knowledge_graph():
         SET m3.commonApplications = "Framing, Furniture, Decorative elements", m3.description = "A natural composite material, primarily composed of cellulose fibers."
 
     MERGE (d1:Deterioration {name: "Cracking"})
+        SET d1.detailedDescription = "A linear fracture in a material, which can vary in width, depth, and orientation. Can be surface-breaking or internal, and may propagate under stress."
     MERGE (d2:Deterioration {name: "Corrosion"})
+        SET d2.detailedDescription = "The degradation of a material, typically a metal, due to chemical or electrochemical reactions with its environment. Results in material loss and formation of oxides."
     MERGE (d3:Deterioration {name: "Delamination"})
 
     MERGE (e1:Environment {name: "Humid"})
@@ -173,15 +175,17 @@ def seed_knowledge_graph():
     MERGE (e4:Environment {name: "High Temperature"})
 
     MERGE (n1:NDTMethod {name: "Ultrasonic Testing"})
-        SET n1.description = "Uses high-frequency sound waves to detect internal flaws and characterize material thickness.", n1.costEstimate = "Medium", n1.methodCategory = "Volumetric"
+        SET n1.description = "Uses high-frequency sound waves to detect internal flaws and characterize material thickness.", n1.costEstimate = "Medium", n1.methodCategory = "Volumetric",
+            n1.detectionCapabilities = "Detects internal and surface flaws like cracks, voids, and delaminations; measures thickness.", n1.applicableMaterialsNote = "Requires good acoustic coupling; highly attenuative or geometrically complex materials can be challenging."
     MERGE (n2:NDTMethod {name: "GPR"})
-        SET n2.description = "Ground Penetrating Radar uses electromagnetic waves to image the subsurface.", n2.costEstimate = "High", n2.methodCategory = "Volumetric"
+        SET n2.description = "Ground Penetrating Radar uses electromagnetic waves to image the subsurface.", n2.costEstimate = "High", n2.methodCategory = "Volumetric" // No new properties added here for brevity in example
     MERGE (n3:NDTMethod {name: "Thermography"})
-        SET n3.description = "Infrared thermography detects temperature differences to find defects like delaminations or moisture.", n3.costEstimate = "Medium", n3.methodCategory = "Surface"
+        SET n3.description = "Infrared thermography detects temperature differences to find defects like delaminations or moisture.", n3.costEstimate = "Medium", n3.methodCategory = "Surface" // No new properties added here for brevity
     MERGE (n4:NDTMethod {name: "Acoustic Emission"})
-        SET n4.description = "Passively listens for energy releases (acoustic emissions) from active cracks or defects under stress.", n4.costEstimate = "High", n4.methodCategory = "Volumetric"
+        SET n4.description = "Passively listens for energy releases (acoustic emissions) from active cracks or defects under stress.", n4.costEstimate = "High", n4.methodCategory = "Volumetric" // No new properties added here
     MERGE (n5:NDTMethod {name: "Visual Inspection"})
-        SET n5.description = "The oldest and most common NDT method, relying on direct observation of the material surface.", n5.costEstimate = "Low", n5.methodCategory = "Surface"
+        SET n5.description = "The oldest and most common NDT method, relying on direct observation of the material surface.", n5.costEstimate = "Low", n5.methodCategory = "Surface",
+            n5.detectionCapabilities = "Detects surface-breaking defects, discoloration, and gross anomalies visible to the naked eye or with low magnification.", n5.applicableMaterialsNote = "Effectiveness depends on surface condition, lighting, and inspector skill. May require surface cleaning."
 
     MERGE (s1:Sensor {name: "Acoustic Sensor"})
     MERGE (s2:Sensor {name: "Thermal Camera"})
@@ -270,7 +274,7 @@ with tab1:
                               placeholder="e.g., Cracks on concrete wall in humid environment",
                               key="nl_input")
 
-    col1_run_nl, col2_run_nl = st.columns([1, 3]) # Renamed to avoid conflict
+    col1_run_nl, col2_run_nl = st.columns([1, 3])
     with col1_run_nl:
         run_nl = st.button("🔍 Plan Inspection", key="run_nl", use_container_width=True)
     
@@ -281,10 +285,11 @@ with tab1:
         
         with st.spinner("PlannerAgent thinking..."):
             plan_agent_output_tab1 = loop.run_until_complete(st.session_state.plan.run(user_input))
+            plan_agent_output_tab1_html = plan_agent_output_tab1.replace('\n', '<br>')
             st.markdown(f"""
             <div class="agent-section planner-agent">
                 <h4>🧠 PlannerAgent</h4>
-                <p>{plan_agent_output_tab1.replace('\n', '<br>')}</p>
+                <p>{plan_agent_output_tab1_html}</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -292,21 +297,22 @@ with tab1:
             tool_agent_output_tab1 = loop.run_until_complete(st.session_state.tools.run(plan_agent_output_tab1))
             tools_summary_tab1 = tool_agent_output_tab1.get("summary_text", "")
             recommended_methods_tab1_list = tool_agent_output_tab1.get("recommended_methods", [])
-
+            tools_summary_tab1_html = tools_summary_tab1.replace('\n', '<br>')
             st.markdown(f"""
             <div class="agent-section tool-agent">
                 <h4>🔧 ToolSelectorAgent</h4>
-                <p>{tools_summary_tab1.replace('\n', '<br>')}</p>
+                <p>{tools_summary_tab1_html}</p>
             </div>
             """, unsafe_allow_html=True)
 
-        forecast_text_tab1 = "" # Initialize
+        forecast_text_tab1 = ""
         with st.spinner("ForecasterAgent running..."):
             forecast_text_tab1 = loop.run_until_complete(st.session_state.fore.run(tools_summary_tab1))
+            forecast_text_tab1_html = forecast_text_tab1.replace('\n', '<br>')
             st.markdown(f"""
             <div class="agent-section forecaster-agent">
                 <h4>📉 ForecasterAgent</h4>
-                <p>{forecast_text_tab1.replace('\n', '<br>')}</p>
+                <p>{forecast_text_tab1_html}</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -349,7 +355,6 @@ with tab1:
             fb_col1_t1, fb_col2_t1 = st.columns(2)
             with fb_col1_t1:
                 if st.button("👍 Yes", key="helpful_tab1", use_container_width=True):
-                    # For Tab 1, plan_id is not explicitly created yet. Using forecast text as identifier.
                     KGInterface().log_plan_feedback(plan_identifier=forecast_text_tab1, is_helpful=True)
                     st.toast("🙏 Thank you for your feedback!", icon="👍")
             with fb_col2_t1:
@@ -366,12 +371,12 @@ with tab2:
     </div>
     """, unsafe_allow_html=True)
 
-    kg_tab2 = KGInterface() # Renamed to avoid conflict with global 'kg' if any
+    kg_tab2 = KGInterface()
     material_options = kg_tab2.get_materials()
     deterioration_options = kg_tab2.get_deterioration_types()
     environment_options = kg_tab2.get_environments()
     
-    col1_kg, col2_kg, col3_kg = st.columns(3) # Renamed
+    col1_kg, col2_kg, col3_kg = st.columns(3)
 
     with col1_kg:
         st.markdown("#### Material")
@@ -385,7 +390,7 @@ with tab2:
         st.markdown("#### Environment")
         environment = st.selectbox("Select Environment", environment_options, key="kg_env")
 
-    col1_run_kg, col2_run_kg = st.columns([1, 3]) # Renamed
+    col1_run_kg, col2_run_kg = st.columns([1, 3])
     with col1_run_kg:
         run_kg = st.button("🧠 Plan KG-Based Inspection", key="run_kg", use_container_width=True)
 
@@ -394,9 +399,9 @@ with tab2:
 
     if run_kg:
         loop = st.session_state.loop
-        st.session_state.current_plan_id_tab2 = None # Reset on new run
+        st.session_state.current_plan_id_tab2 = None
 
-        col1_results_kg, col2_results_kg = st.columns([3, 2]) # Renamed
+        col1_results_kg, col2_results_kg = st.columns([3, 2])
 
         with col1_results_kg:
             with st.spinner("ToolSelectorAgent analyzing KG..."):
@@ -413,7 +418,7 @@ with tab2:
                 """, unsafe_allow_html=True)
                 st.code(plan_summary_tab2, language="markdown")
 
-            forecast_text_tab2 = "" # Initialize
+            forecast_text_tab2 = ""
             with st.spinner("ForecasterAgent modeling damage evolution..."):
                 forecast_context_tab2_initial = f"""
                 Material: {material}
@@ -422,8 +427,9 @@ with tab2:
                 """
                 forecast_text_tab2 = loop.run_until_complete(st.session_state.fore.run(forecast_context_tab2_initial))
 
-                # Log inspection plan and store its ID
                 plan_id_tab2 = kg_tab2.log_inspection_plan(plan_summary_tab2, material, deterioration, environment)
+                if 'current_plan_id_tab2' not in st.session_state:
+                    st.session_state.current_plan_id_tab2 = None
                 st.session_state.current_plan_id_tab2 = plan_id_tab2
 
 
@@ -487,7 +493,7 @@ with tab2:
             </div>
             """, unsafe_allow_html=True)
 
-            if run_kg: # Only try to render if plan was run
+            if run_kg:
                 with st.spinner("Generating visualization..."):
                     subgraph = kg_tab2.get_reasoning_subgraph(material, deterioration, environment)
                     if subgraph:
@@ -505,7 +511,7 @@ with tab3:
     </div>
     """, unsafe_allow_html=True)
     
-    col1_exp, col2_exp = st.columns(2) # Renamed
+    col1_exp, col2_exp = st.columns(2)
     
     with col1_exp:
         st.markdown("""
@@ -608,7 +614,7 @@ with tab4:
             latencies = []
 
             with st.spinner("Running LLM for all CQs..."):
-                for cq_item in cqs: # Renamed cq to cq_item to avoid conflict
+                for cq_item in cqs:
                     start = time.time()
                     try:
                         axiom = loop.run_until_complete(agent.run(cq_item))
@@ -618,7 +624,7 @@ with tab4:
                         results.append((cq_item, f"# ERROR: {str(e)}"))
                         latencies.append(0)
 
-            for i, (cq_item, axiom) in enumerate(results, start=1): # Renamed cq
+            for i, (cq_item, axiom) in enumerate(results, start=1):
                 st.markdown(f"### CQ {i}: {cq_item}")
                 st.code(axiom.strip(), language="markdown")
 
@@ -634,7 +640,7 @@ with tab4:
                 out_path.mkdir(parents=True, exist_ok=True)
                 file_path = out_path / f"ontology_output_{timestamp}.ttl"
                 with open(file_path, "w", encoding="utf-8") as f:
-                    for cq_item, axiom in results: # Renamed cq
+                    for cq_item, axiom in results:
                         f.write(f"# CQ: {cq_item}\n{axiom}\n\n")
                 st.success(f"Ontology saved to {file_path}")
          
@@ -645,7 +651,7 @@ with tab4:
     </div>
     """, unsafe_allow_html=True)
     
-    query_text_area = st.text_area("Enter Cypher query:", # Renamed query to query_text_area
+    query_text_area = st.text_area("Enter Cypher query:",
                         height=100,
                         value="""MATCH (n)-[r]->(m)
 WHERE n:Material AND m:Deterioration
@@ -653,7 +659,7 @@ RETURN n.name AS Material, type(r) AS Relation, m.name AS Deterioration""")
     
     if st.button("🔎 Run Query", key="run_cypher", use_container_width=True):
         try:
-            results_cypher = KGInterface().cypher(query_text_area) # Renamed results
+            results_cypher = KGInterface().cypher(query_text_area)
             if results_cypher:
                 st.dataframe(results_cypher, use_container_width=True)
             else:
@@ -672,7 +678,7 @@ with st.sidebar.expander("🔁 KG Export / Validation"):
         ])
 
     if st.button("✅ Run SHACL Validation"):
-        conforms, report = validate_owl_with_shacl("ndt_kg.owl", "shacl/shacl_constraints.ttl") # Corrected path
+        conforms, report = validate_owl_with_shacl("ndt_kg.owl", "shacl/shacl_constraints.ttl")
         if conforms:
             st.success("KG conforms to SHACL constraints!")
         else:
