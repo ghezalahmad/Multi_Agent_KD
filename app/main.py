@@ -12,7 +12,7 @@ from agents.planner_agent import PlannerAgent
 from agents.tool_agent import ToolSelectorAgent
 from agents.forecaster_agent import ForecasterAgent
 from kg_interface import KGInterface
-import sys
+import sys # Already imported, but kept for safety if original was different
 from utils.gantt_chart import render_gantt_chart
 
 
@@ -219,7 +219,6 @@ if "loop" not in st.session_state:
 with st.sidebar:
     st.markdown("### 📊 Knowledge Graph Stats")
     
-    # Dashboard stats
     counts = KGInterface().cypher("""
         MATCH (n) RETURN labels(n)[0] AS label, count(*) AS count ORDER BY count DESC
     """)
@@ -271,8 +270,8 @@ with tab1:
                               placeholder="e.g., Cracks on concrete wall in humid environment",
                               key="nl_input")
 
-    col1, col2 = st.columns([1, 3])
-    with col1:
+    col1_run_nl, col2_run_nl = st.columns([1, 3]) # Renamed to avoid conflict
+    with col1_run_nl:
         run_nl = st.button("🔍 Plan Inspection", key="run_nl", use_container_width=True)
     
     if user_input and run_nl:
@@ -281,65 +280,50 @@ with tab1:
         st.markdown("#### Inspection Planning Process")
         
         with st.spinner("PlannerAgent thinking..."):
-            plan = loop.run_until_complete(st.session_state.plan.run(user_input))
-            st.markdown("""
+            plan_agent_output_tab1 = loop.run_until_complete(st.session_state.plan.run(user_input))
+            st.markdown(f"""
             <div class="agent-section planner-agent">
                 <h4>🧠 PlannerAgent</h4>
-                <p>{}</p>
+                <p>{plan_agent_output_tab1.replace('\n', '<br>')}</p>
             </div>
-            """.format(plan.replace('\n', '<br>')), unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
         with st.spinner("ToolSelectorAgent working..."):
-            tools = loop.run_until_complete(st.session_state.tools.run(plan))
-            st.markdown("""
+            tool_agent_output_tab1 = loop.run_until_complete(st.session_state.tools.run(plan_agent_output_tab1))
+            tools_summary_tab1 = tool_agent_output_tab1.get("summary_text", "")
+            recommended_methods_tab1_list = tool_agent_output_tab1.get("recommended_methods", [])
+
+            st.markdown(f"""
             <div class="agent-section tool-agent">
                 <h4>🔧 ToolSelectorAgent</h4>
-                <p>{}</p>
+                <p>{tools_summary_tab1.replace('\n', '<br>')}</p>
             </div>
-            """.format(tools.replace('\n', '<br>')), unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
+        forecast_text_tab1 = "" # Initialize
         with st.spinner("ForecasterAgent running..."):
-            forecast = loop.run_until_complete(st.session_state.fore.run(tools))
-            st.markdown("""
+            forecast_text_tab1 = loop.run_until_complete(st.session_state.fore.run(tools_summary_tab1))
+            st.markdown(f"""
             <div class="agent-section forecaster-agent">
                 <h4>📉 ForecasterAgent</h4>
-                <p>{}</p>
+                <p>{forecast_text_tab1.replace('\n', '<br>')}</p>
             </div>
-            """.format(forecast.replace('\n', '<br>')), unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
         st.markdown("""
         <div class="dashboard-card">
             <h3>📊 Final Inspection Plan Summary</h3>
         </div>
         """, unsafe_allow_html=True)
-        st.code(forecast, language="markdown")
+        st.code(forecast_text_tab1, language="markdown")
 
-        # --- Interactive Refinement for Tab 1 ---
         st.markdown("---")
         st.markdown("#### Focused Deterioration Forecast")
 
-        # Simple parsing of NDT methods from ToolSelectorAgent output (tools string)
-        # This assumes methods are listed like "*   **[NDT Method Name]:**..."
-        import re
-        recommended_methods_tab1 = []
-        if tools: # 'tools' is the output from ToolSelectorAgent
-            method_matches = re.findall(r"\* \s*\*\*(.*?):\*\*", tools, re.IGNORECASE)
-            if method_matches:
-                recommended_methods_tab1 = [m.strip() for m in method_matches]
-
-        if not recommended_methods_tab1 and tools: # Fallback if primary parsing fails
-            lines = tools.split('\n')
-            for line in lines:
-                if line.strip().startswith("*") and ":" in line:
-                    method_name = line.split(":")[0].replace("*","").strip()
-                    if method_name and len(method_name) > 2: # Basic sanity check
-                         recommended_methods_tab1.append(method_name)
-            recommended_methods_tab1 = list(set(recommended_methods_tab1)) # Unique
-
-        if recommended_methods_tab1:
+        if recommended_methods_tab1_list:
             selected_methods_tab1 = st.multiselect(
                 "Select NDT Method(s) for Focused Forecast:",
-                options=recommended_methods_tab1,
+                options=recommended_methods_tab1_list,
                 key="focused_select_tab1"
             )
             if st.button("Re-run Forecast for Selected", key="rerun_forecast_tab1"):
@@ -347,8 +331,8 @@ with tab1:
                     focused_context_tab1 = (
                         f"Focusing on NDT methods: {', '.join(selected_methods_tab1)}.\n"
                         f"Original user query: {user_input}\n"
-                        f"Initial plan context: {plan}\n"
-                        f"Tool selection context: {tools}"
+                        f"Initial plan context: {plan_agent_output_tab1}\n"
+                        f"Tool selection context: {tools_summary_tab1}"
                     )
                     with st.spinner("ForecasterAgent running focused forecast..."):
                         focused_forecast_tab1 = loop.run_until_complete(st.session_state.fore.run(focused_context_tab1))
@@ -357,24 +341,21 @@ with tab1:
                 else:
                     st.warning("Please select at least one NDT method for focused forecast.")
         else:
-            st.info("No specific NDT methods identified from the previous step to allow focused forecast.")
+            st.info("No specific NDT methods parsed from ToolSelectorAgent to allow focused forecast.")
 
-        # --- User Feedback for Tab 1 ---
-        if forecast: # Check if forecast exists before showing feedback buttons
+        if forecast_text_tab1:
             st.markdown("---")
             st.markdown("##### Was this plan helpful?")
             fb_col1_t1, fb_col2_t1 = st.columns(2)
             with fb_col1_t1:
                 if st.button("👍 Yes", key="helpful_tab1", use_container_width=True):
-                    KGInterface().log_plan_feedback(plan_identifier=forecast, is_helpful=True)
+                    # For Tab 1, plan_id is not explicitly created yet. Using forecast text as identifier.
+                    KGInterface().log_plan_feedback(plan_identifier=forecast_text_tab1, is_helpful=True)
                     st.toast("🙏 Thank you for your feedback!", icon="👍")
             with fb_col2_t1:
                 if st.button("👎 No", key="unhelpful_tab1", use_container_width=True):
-                    KGInterface().log_plan_feedback(plan_identifier=forecast, is_helpful=False)
+                    KGInterface().log_plan_feedback(plan_identifier=forecast_text_tab1, is_helpful=False)
                     st.toast("🙏 Thank you! Your feedback helps us improve.", icon="💡")
-        # --- End User Feedback ---
-        # --- End Interactive Refinement ---
-
 
 # ------------------- TAB 2: KG-Driven Structured Planner -------------------
 with tab2:
@@ -385,96 +366,87 @@ with tab2:
     </div>
     """, unsafe_allow_html=True)
 
-    # 🔄 Load options dynamically from Neo4j
-    kg = KGInterface()
-    material_options = kg.get_materials()
-    deterioration_options = kg.get_deterioration_types()
-    environment_options = kg.get_environments()
+    kg_tab2 = KGInterface() # Renamed to avoid conflict with global 'kg' if any
+    material_options = kg_tab2.get_materials()
+    deterioration_options = kg_tab2.get_deterioration_types()
+    environment_options = kg_tab2.get_environments()
     
-    col1, col2, col3 = st.columns(3)
+    col1_kg, col2_kg, col3_kg = st.columns(3) # Renamed
 
-    with col1:
+    with col1_kg:
         st.markdown("#### Material")
         material = st.selectbox("Select Material", material_options, key="kg_material")
 
-    with col2:
+    with col2_kg:
         st.markdown("#### Defect Type")
         deterioration = st.selectbox("Select Defect", deterioration_options, key="kg_defect")
 
-    with col3:
+    with col3_kg:
         st.markdown("#### Environment")
         environment = st.selectbox("Select Environment", environment_options, key="kg_env")
 
-    col1, col2 = st.columns([1, 3])
-    with col1:
+    col1_run_kg, col2_run_kg = st.columns([1, 3]) # Renamed
+    with col1_run_kg:
         run_kg = st.button("🧠 Plan KG-Based Inspection", key="run_kg", use_container_width=True)
+
+    if 'current_plan_id_tab2' not in st.session_state:
+        st.session_state.current_plan_id_tab2 = None
 
     if run_kg:
         loop = st.session_state.loop
+        st.session_state.current_plan_id_tab2 = None # Reset on new run
 
-        col1, col2 = st.columns([3, 2])
+        col1_results_kg, col2_results_kg = st.columns([3, 2]) # Renamed
 
-        with col1:
+        with col1_results_kg:
             with st.spinner("ToolSelectorAgent analyzing KG..."):
-                plan = loop.run_until_complete(
+                tool_agent_output_tab2 = loop.run_until_complete(
                     st.session_state.tools.run_structured(material, deterioration, environment)
                 )
+                plan_summary_tab2 = tool_agent_output_tab2.get("summary_text", "")
+                recommended_methods_tab2_list = tool_agent_output_tab2.get("recommended_methods", [])
+
                 st.markdown("""
                 <div class="dashboard-card">
                     <h4>🔍 ToolSelectorAgent Decision</h4>
                 </div>
                 """, unsafe_allow_html=True)
-                st.code(plan, language="markdown")
+                st.code(plan_summary_tab2, language="markdown")
 
+            forecast_text_tab2 = "" # Initialize
             with st.spinner("ForecasterAgent modeling damage evolution..."):
-                forecast_context = f"""
+                forecast_context_tab2_initial = f"""
                 Material: {material}
                 Defect: {deterioration}
                 Environment: {environment}
                 """
-                forecast = loop.run_until_complete(st.session_state.fore.run(forecast_context))
-                kg.log_inspection_plan(plan, material, deterioration, environment)
+                forecast_text_tab2 = loop.run_until_complete(st.session_state.fore.run(forecast_context_tab2_initial))
+
+                # Log inspection plan and store its ID
+                plan_id_tab2 = kg_tab2.log_inspection_plan(plan_summary_tab2, material, deterioration, environment)
+                st.session_state.current_plan_id_tab2 = plan_id_tab2
+
 
                 st.markdown("""
                 <div class="dashboard-card">
                     <h4>📈 Forecasted Deterioration (12-month projection)</h4>
                 </div>
                 """, unsafe_allow_html=True)
-                st.text(forecast)
-                render_forecast_chart(forecast)
-                render_gantt_chart(forecast)
+                st.text(forecast_text_tab2)
+                render_forecast_chart(forecast_text_tab2)
+                render_gantt_chart(forecast_text_tab2)
 
-                # --- Interactive Refinement for Tab 2 ---
                 st.markdown("---")
                 st.markdown("#### Focused Deterioration Forecast")
 
-                # Simple parsing of NDT methods from ToolSelectorAgent output (variable 'plan' in this tab)
-                import re
-                recommended_methods_tab2 = []
-                if plan: # 'plan' is the output from ToolSelectorAgent.run_structured()
-                    method_matches_tab2 = re.findall(r"\* \s*\*\*(.*?):\*\*", plan, re.IGNORECASE)
-                    if method_matches_tab2:
-                        recommended_methods_tab2 = [m.strip() for m in method_matches_tab2]
-
-                if not recommended_methods_tab2 and plan: # Fallback
-                    lines = plan.split('\n')
-                    for line in lines:
-                        if line.strip().startswith("*") and ":" in line:
-                            method_name = line.split(":")[0].replace("*","").strip()
-                            if method_name and len(method_name) > 2:
-                                 recommended_methods_tab2.append(method_name)
-                    recommended_methods_tab2 = list(set(recommended_methods_tab2))
-
-
-                if recommended_methods_tab2:
+                if recommended_methods_tab2_list:
                     selected_methods_tab2 = st.multiselect(
                         "Select NDT Method(s) for Focused Forecast:",
-                        options=recommended_methods_tab2,
+                        options=recommended_methods_tab2_list,
                         key="focused_select_tab2"
                     )
                     if st.button("Re-run Forecast for Selected", key="rerun_forecast_tab2"):
                         if selected_methods_tab2:
-                            # Construct context similar to how it was built for the initial forecast in this tab
                             focused_context_tab2 = (
                                 f"Focusing on NDT methods: {', '.join(selected_methods_tab2)}.\n"
                                 f"Original context: Material: {material}, Defect: {deterioration}, Environment: {environment}"
@@ -483,42 +455,45 @@ with tab2:
                                 focused_forecast_tab2 = loop.run_until_complete(st.session_state.fore.run(focused_context_tab2))
                                 st.markdown("##### Focused Forecast Results:")
                                 st.code(focused_forecast_tab2, language="markdown")
-                                render_forecast_chart(focused_forecast_tab2) # Also render chart for new forecast
+                                render_forecast_chart(focused_forecast_tab2)
                                 render_gantt_chart(focused_forecast_tab2)
                         else:
                             st.warning("Please select at least one NDT method for focused forecast.")
                 else:
-                    st.info("No specific NDT methods identified from the previous step to allow focused forecast.")
+                    st.info("No specific NDT methods parsed from ToolSelectorAgent to allow focused forecast.")
 
-                # --- User Feedback for Tab 2 ---
-                if forecast: # Check if forecast exists before showing feedback buttons (forecast is defined in this scope)
+                if forecast_text_tab2:
                     st.markdown("---")
                     st.markdown("##### Was this plan helpful?")
                     fb_col1_t2, fb_col2_t2 = st.columns(2)
                     with fb_col1_t2:
                         if st.button("👍 Yes", key="helpful_tab2", use_container_width=True):
-                            KGInterface().log_plan_feedback(plan_identifier=forecast, is_helpful=True)
-                            st.toast("🙏 Thank you for your feedback!", icon="👍")
+                            if st.session_state.current_plan_id_tab2:
+                                KGInterface().log_plan_feedback(plan_id=st.session_state.current_plan_id_tab2, is_helpful=True)
+                                st.toast("🙏 Thank you for your feedback!", icon="👍")
+                            else:
+                                st.toast("Error: Plan ID not found for feedback.", icon="⚠️")
                     with fb_col2_t2:
                         if st.button("👎 No", key="unhelpful_tab2", use_container_width=True):
-                            KGInterface().log_plan_feedback(plan_identifier=forecast, is_helpful=False)
-                            st.toast("🙏 Thank you! Your feedback helps us improve.", icon="💡")
-                # --- End User Feedback ---
-                # --- End Interactive Refinement ---
-
-        with col2:
+                            if st.session_state.current_plan_id_tab2:
+                                KGInterface().log_plan_feedback(plan_id=st.session_state.current_plan_id_tab2, is_helpful=False)
+                                st.toast("🙏 Thank you! Your feedback helps us improve.", icon="💡")
+                            else:
+                                st.toast("Error: Plan ID not found for feedback.", icon="⚠️")
+        with col2_results_kg:
             st.markdown("""
             <div class="dashboard-card">
                 <h4>👁 Knowledge Graph Reasoning Path</h4>
             </div>
             """, unsafe_allow_html=True)
 
-            with st.spinner("Generating visualization..."):
-                subgraph = kg.get_reasoning_subgraph(material, deterioration, environment)
-                if subgraph:
-                    render_kg_graph(subgraph)
-                else:
-                    st.warning("No subgraph data found for current inputs.")
+            if run_kg: # Only try to render if plan was run
+                with st.spinner("Generating visualization..."):
+                    subgraph = kg_tab2.get_reasoning_subgraph(material, deterioration, environment)
+                    if subgraph:
+                        render_kg_graph(subgraph)
+                    else:
+                        st.warning("No subgraph data found for current inputs.")
 
 
 # ------------------- TAB 3: Knowledge Graph Explorer -------------------
@@ -530,9 +505,9 @@ with tab3:
     </div>
     """, unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
+    col1_exp, col2_exp = st.columns(2) # Renamed
     
-    with col1:
+    with col1_exp:
         st.markdown("""
         <div class="dashboard-card">
             <h4>📦 Node Counts by Type</h4>
@@ -544,7 +519,6 @@ with tab3:
         """)
         
         if counts:
-            # Create a more visual representation of counts
             for row in counts:
                 icon = '📦' if row['label'] == 'Material' else '🔍' if row['label'] == 'NDTMethod' else '🌡️' if row['label'] == 'Environment' else '💢' if row['label'] == 'Deterioration' else '📡' if row['label'] == 'Sensor' else '📌'
                 st.markdown(f"""
@@ -565,7 +539,7 @@ with tab3:
             if seed_knowledge_graph():
                 st.success("✅ KG seeded successfully!")
     
-    with col2:
+    with col2_exp:
         st.markdown("""
         <div class="dashboard-card">
             <h4>🔗 Sample Relationships</h4>
@@ -634,18 +608,18 @@ with tab4:
             latencies = []
 
             with st.spinner("Running LLM for all CQs..."):
-                for cq in cqs:
+                for cq_item in cqs: # Renamed cq to cq_item to avoid conflict
                     start = time.time()
                     try:
-                        axiom = loop.run_until_complete(agent.run(cq))
-                        results.append((cq, axiom))
+                        axiom = loop.run_until_complete(agent.run(cq_item))
+                        results.append((cq_item, axiom))
                         latencies.append(time.time() - start)
                     except Exception as e:
-                        results.append((cq, f"# ERROR: {str(e)}"))
+                        results.append((cq_item, f"# ERROR: {str(e)}"))
                         latencies.append(0)
 
-            for i, (cq, axiom) in enumerate(results, start=1):
-                st.markdown(f"### CQ {i}: {cq}")
+            for i, (cq_item, axiom) in enumerate(results, start=1): # Renamed cq
+                st.markdown(f"### CQ {i}: {cq_item}")
                 st.code(axiom.strip(), language="markdown")
 
             if results:
@@ -660,12 +634,10 @@ with tab4:
                 out_path.mkdir(parents=True, exist_ok=True)
                 file_path = out_path / f"ontology_output_{timestamp}.ttl"
                 with open(file_path, "w", encoding="utf-8") as f:
-                    for cq, axiom in results:
-                        f.write(f"# CQ: {cq}\n{axiom}\n\n")
+                    for cq_item, axiom in results: # Renamed cq
+                        f.write(f"# CQ: {cq_item}\n{axiom}\n\n")
                 st.success(f"Ontology saved to {file_path}")
          
-    
-    # Direct Cypher query capability for advanced users
     st.markdown("""
     <div class="dashboard-card">
         <h4>🔍 Advanced Query</h4>
@@ -673,7 +645,7 @@ with tab4:
     </div>
     """, unsafe_allow_html=True)
     
-    query = st.text_area("Enter Cypher query:", 
+    query_text_area = st.text_area("Enter Cypher query:", # Renamed query to query_text_area
                         height=100,
                         value="""MATCH (n)-[r]->(m)
 WHERE n:Material AND m:Deterioration
@@ -681,9 +653,9 @@ RETURN n.name AS Material, type(r) AS Relation, m.name AS Deterioration""")
     
     if st.button("🔎 Run Query", key="run_cypher", use_container_width=True):
         try:
-            results = KGInterface().cypher(query)
-            if results:
-                st.dataframe(results, use_container_width=True)
+            results_cypher = KGInterface().cypher(query_text_area) # Renamed results
+            if results_cypher:
+                st.dataframe(results_cypher, use_container_width=True)
             else:
                 st.info("Query returned no results")
         except Exception as e:
@@ -694,22 +666,18 @@ from utils.shacl_validator import validate_owl_with_shacl
 
 with st.sidebar.expander("🔁 KG Export / Validation"):
     if st.button("⬇️ Export to OWL"):
-        # Optional: Extract real triples from KG
         export_kg_to_owl([
             ("Concrete", "hasDefect", "Cracking"),
             ("Cracking", "detectedBy", "Ultrasonic Testing")
         ])
 
     if st.button("✅ Run SHACL Validation"):
-        conforms, report = validate_owl_with_shacl("ndt_kg.owl", "ontology/shapes.ttl")
+        conforms, report = validate_owl_with_shacl("ndt_kg.owl", "shacl/shacl_constraints.ttl") # Corrected path
         if conforms:
             st.success("KG conforms to SHACL constraints!")
         else:
             st.error("❌ KG does NOT conform!")
             st.text(report)
-
-
-
 
 # Footer
 st.markdown("""
