@@ -281,7 +281,7 @@ with tab1:
         
         with st.spinner("PlannerAgent thinking..."):
             plan_agent_output_tab1 = loop.run_until_complete(st.session_state.plan.run(user_input))
-            # Corrected: Use the actual variable plan_agent_output_tab1
+            # Resolved: Kept the version that correctly assigns to the _html variable
             plan_agent_output_tab1_html = plan_agent_output_tab1.replace('\n', '<br>') 
             st.markdown(f"""
             <div class="agent-section planner-agent">
@@ -294,8 +294,7 @@ with tab1:
             tool_agent_output_tab1 = loop.run_until_complete(st.session_state.tools.run(plan_agent_output_tab1))
             tools_summary_tab1 = tool_agent_output_tab1.get("summary_text", "")
             recommended_methods_tab1_list = tool_agent_output_tab1.get("recommended_methods", [])
-
-            # Corrected: Use the actual variable tools_summary_tab1
+            # Resolved: Kept the version that correctly assigns to the _html variable
             tools_summary_tab1_html = tools_summary_tab1.replace('\n', '<br>')
             st.markdown(f"""
             <div class="agent-section tool-agent">
@@ -307,7 +306,7 @@ with tab1:
         forecast_text_tab1 = "" # Initialize
         with st.spinner("ForecasterAgent running..."):
             forecast_text_tab1 = loop.run_until_complete(st.session_state.fore.run(tools_summary_tab1))
-            # Corrected: Use the actual variable forecast_text_tab1
+            # Resolved: Kept the version that correctly assigns to the _html variable
             forecast_text_tab1_html = forecast_text_tab1.replace('\n', '<br>')
             st.markdown(f"""
             <div class="agent-section forecaster-agent">
