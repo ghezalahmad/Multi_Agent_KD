@@ -222,15 +222,38 @@ class KGInterface:
                 if md.get("commonApplications"):
                     context_parts.append(f"Common Applications: {md['commonApplications']}")
 
-        if defect_name: # For now, just including the defect name for context
+        if defect_name:
             context_parts.append(f"--- Defect/Observation of Concern: {defect_name} ---")
+            # Try to fetch detailedDescription for the defect (checking Deterioration then PhysicalChange)
+            query_defect_desc = """
+            OPTIONAL MATCH (d:Deterioration {name: $defect_name})
+            RETURN d.detailedDescription AS description
+            LIMIT 1
+            """
+            defect_desc_details = self.cypher(query_defect_desc, {"defect_name": defect_name})
+            if defect_desc_details and defect_desc_details[0] and defect_desc_details[0].get("description"):
+                context_parts.append(f"Defect Description: {defect_desc_details[0]['description']}")
+            else: # Try PhysicalChange if not found on Deterioration
+                query_defect_pc_desc = """
+                OPTIONAL MATCH (pc:PhysicalChange {name: $defect_name})
+                RETURN pc.detailedDescription AS description
+                LIMIT 1
+                """
+                defect_pc_desc_details = self.cypher(query_defect_pc_desc, {"defect_name": defect_name})
+                if defect_pc_desc_details and defect_pc_desc_details[0] and defect_pc_desc_details[0].get("description"):
+                     context_parts.append(f"Defect Description: {defect_pc_desc_details[0]['description']}")
+
 
         if method_names:
             context_parts.append("--- NDT Method Details ---")
             for method_name in method_names:
                 query_method = """
                 MATCH (n:NDTMethod {name: $method_name})
-                RETURN n.description AS description, n.costEstimate AS costEstimate, n.methodCategory AS methodCategory
+                RETURN n.description AS description,
+                       n.costEstimate AS costEstimate,
+                       n.methodCategory AS methodCategory,
+                       n.detectionCapabilities AS detectionCapabilities,
+                       n.applicableMaterialsNote AS applicableMaterialsNote
                 LIMIT 1
                 """
                 method_details = self.cypher(query_method, {"method_name": method_name})
@@ -243,6 +266,10 @@ class KGInterface:
                         context_parts.append(f"  Category: {m_details['methodCategory']}")
                     if m_details.get("costEstimate"):
                         context_parts.append(f"  Cost Estimate: {m_details['costEstimate']}")
+                    if m_details.get("detectionCapabilities"):
+                        context_parts.append(f"  Detection Capabilities: {m_details['detectionCapabilities']}")
+                    if m_details.get("applicableMaterialsNote"):
+                        context_parts.append(f"  Applicable Materials Note: {m_details['applicableMaterialsNote']}")
 
         if not context_parts:
             return "No specific details found in KG for the provided entities."

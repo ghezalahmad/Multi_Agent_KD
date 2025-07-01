@@ -171,6 +171,28 @@
   rdfs:range xsd:string;
   rdfs:comment "Name of the defect in a proposed fact." .
 
+###  http://example.org/ndt#detailedDescription
+:detailedDescription rdf:type owl:DatatypeProperty ;
+    rdfs:domain [ rdf:type owl:Class ;
+            owl:unionOf ( :Deterioration
+                          :PhysicalChange
+                        )
+          ] ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A more detailed textual description of an entity, supplementing the primary name/label and general description." .
+
+###  http://example.org/ndt#detectionCapabilities
+:detectionCapabilities rdf:type owl:DatatypeProperty ;
+    rdfs:domain :NDTMethod ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Describes the specific detection capabilities of an NDT method (e.g., 'Detects surface cracks > 0.5mm')." .
+
+###  http://example.org/ndt#applicableMaterialsNote
+:applicableMaterialsNote rdf:type owl:DatatypeProperty ;
+    rdfs:domain :NDTMethod ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A textual note on material applicability for an NDT method (e.g., 'Less effective on highly attenuative materials')." .
+
 #################################################################
 #    Classes
 #################################################################

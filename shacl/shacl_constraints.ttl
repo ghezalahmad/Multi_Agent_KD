@@ -52,6 +52,13 @@ ndt:DeteriorationShape a sh:NodeShape ;
         sh:nodeKind sh:IRI ;
         sh:class ndt:NDTMethod ;
         sh:message "Deterioration's detectedBy must be an IRI linking to an NDTMethod." ;
+    ] ;
+    sh:property [
+        sh:path ndt:detailedDescription ;
+        sh:datatype xsd:string ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:message "Deterioration detailed description should be a string." ;
     ] .
 
 #################################
@@ -90,6 +97,13 @@ ndt:PhysicalChangeShape a sh:NodeShape ;
         sh:nodeKind sh:IRI ;
         sh:class ndt:NDTMethod ;
         sh:message "PhysicalChange's detectedBy must be an IRI linking to an NDTMethod." ;
+    ] ;
+    sh:property [
+        sh:path ndt:detailedDescription ;
+        sh:datatype xsd:string ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:message "PhysicalChange detailed description should be a string." ;
     ] .
 
 #######################
@@ -133,6 +147,20 @@ ndt:NDTMethodShape a sh:NodeShape ;
         sh:class ndt:Environment ;
         sh:minCount 0 ; # A method might not always have a specific environment requirement listed
         sh:message "NDTMethod's requiresEnvironment must be an IRI linking to an Environment." ;
+    ] ;
+    sh:property [
+        sh:path ndt:detectionCapabilities ;
+        sh:datatype xsd:string ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:message "NDTMethod detectionCapabilities should be a string." ;
+    ] ;
+    sh:property [
+        sh:path ndt:applicableMaterialsNote ;
+        sh:datatype xsd:string ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:message "NDTMethod applicableMaterialsNote should be a string." ;
     ] .
 
 #######################
@@ -152,6 +180,13 @@ ndt:SensorShape a sh:NodeShape ;
         sh:nodeKind sh:IRI ;
         sh:class ndt:NDTMethod ;
         sh:message "Sensor's recommendedFor must be an IRI linking to an NDTMethod." ;
+    ] ;
+    sh:property [
+        sh:path ndt:detailedDescription ;
+        sh:datatype xsd:string ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:message "Deterioration detailed description should be a string." ;
     ] .
 
 #######################
