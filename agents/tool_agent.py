@@ -83,9 +83,39 @@ Output: {"material": "Steel", "defect": "Corrosion", "environment": "wet"}
         )
 
         # This call uses the agent's actual system prompt and history
-        return await self(context_for_main_prompt)
+        raw_llm_output = await self(context_for_main_prompt)
 
-    async def run_structured(self, material: str, deterioration: str, environment: str) -> str:
+        # Parse recommended methods and sensors from the raw_llm_output
+        recommended_methods = self._parse_list_from_llm_output(raw_llm_output, "Recommended Method Names:")
+        recommended_sensors = self._parse_list_from_llm_output(raw_llm_output, "Recommended Sensor Names:")
+
+        return {
+            "summary_text": raw_llm_output,
+            "recommended_methods": recommended_methods,
+            "recommended_sensors": recommended_sensors
+        }
+
+    def _parse_list_from_llm_output(self, llm_output: str, header: str) -> list[str]:
+        """
+        Parses a list of items from the LLM output string based on a given header.
+        Example line: "Recommended Method Names: [Method1], [Method2]"
+        """
+        try:
+            for line in llm_output.splitlines():
+                if line.startswith(header):
+                    content = line.split(header, 1)[1].strip()
+                    if content.startswith("[") and content.endswith("]"):
+                        content = content[1:-1] # Remove brackets
+                        if not content: # Empty list
+                            return []
+                        return [item.strip() for item in content.split(",")]
+            return [] # Header not found or format incorrect
+        except Exception as e:
+            print(f"Error parsing list with header '{header}' from LLM output: {e}")
+            return []
+
+
+    async def run_structured(self, material: str, deterioration: str, environment: str) -> dict:
         methods = self.kg.recommend_ndt_methods(material, deterioration, environment)
         sensors = self.kg.recommend_sensors(deterioration)
 
