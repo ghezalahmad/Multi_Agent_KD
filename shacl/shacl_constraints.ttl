@@ -1,54 +1,147 @@
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix ndt: <http://example.org/ndt#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 ######################
-# Material constraints
+# Material Shape
 ######################
 ndt:MaterialShape a sh:NodeShape ;
     sh:targetClass ndt:Material ;
     sh:property [
-        sh:path rdfs:label ;
+        sh:path ndt:name ;
         sh:datatype xsd:string ;
         sh:minCount 1 ;
-        sh:message "Material must have an rdfs:label" ;
+        sh:maxCount 1 ;
+        sh:message "Material must have exactly one ndt:name." ;
     ] ;
     sh:property [
-        sh:path ndt:HAS_DETERIORATION_MECHANISM ;
-        sh:minCount 1 ;
-        sh:message "Material must be linked to at least one deterioration mechanism." ;
+        sh:path ndt:hasDeteriorationMechanism ;
+        sh:nodeKind sh:IRI ;
+        sh:message "Value of ndt:hasDeteriorationMechanism must be an IRI (linking to Deterioration or DeteriorationMechanism)." ;
     ] .
 
 #########################
-# NDTMethod constraints
+# Deterioration Shape
 #########################
-ndt:NDTMethodShape a sh:NodeShape ;
-    sh:targetClass ndt:NDTMethod ;
+ndt:DeteriorationShape a sh:NodeShape ;
+    sh:targetClass ndt:Deterioration ;
     sh:property [
-        sh:path rdfs:label ;
+        sh:path ndt:name ;
         sh:datatype xsd:string ;
         sh:minCount 1 ;
-        sh:message "NDTMethod must have an rdfs:label" ;
+        sh:maxCount 1 ;
+        sh:message "Deterioration must have exactly one ndt:name." ;
+    ] .
+
+#################################
+# DeteriorationMechanism Shape
+#################################
+ndt:DeteriorationMechanismShape a sh:NodeShape ;
+    sh:targetClass ndt:DeteriorationMechanism ;
+    sh:property [
+        sh:path ndt:name ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "DeteriorationMechanism must have exactly one ndt:name." ;
+    ] .
+
+#########################
+# PhysicalChange Shape
+#########################
+ndt:PhysicalChangeShape a sh:NodeShape ;
+    sh:targetClass ndt:PhysicalChange ;
+    sh:property [
+        sh:path ndt:name ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "PhysicalChange must have exactly one ndt:name." ;
     ] .
 
 #######################
-# Environment constraint
+# NDTMethod Shape
+#######################
+ndt:NDTMethodShape a sh:NodeShape ;
+    sh:targetClass ndt:NDTMethod ;
+    sh:property [
+        sh:path ndt:name ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "NDTMethod must have exactly one ndt:name." ;
+    ] .
+
+#######################
+# Sensor Shape
+#######################
+ndt:SensorShape a sh:NodeShape ;
+    sh:targetClass ndt:Sensor ;
+    sh:property [
+        sh:path ndt:name ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "Sensor must have exactly one ndt:name." ;
+    ] .
+
+#######################
+# Environment Shape
 #######################
 ndt:EnvironmentShape a sh:NodeShape ;
     sh:targetClass ndt:Environment ;
     sh:property [
-        sh:path rdfs:label ;
+        sh:path ndt:name ;
+        sh:datatype xsd:string ;
         sh:minCount 1 ;
-        sh:message "Environment must have an rdfs:label" ;
+        sh:maxCount 1 ;
+        sh:message "Environment must have exactly one ndt:name." ;
     ] .
 
 #######################
-# InspectionPlan constraint
+# InspectionPlan Shape
 #######################
 ndt:InspectionPlanShape a sh:NodeShape ;
     sh:targetClass ndt:InspectionPlan ;
     sh:property [
-        sh:path rdfs:label ;
+        sh:path ndt:planText ; # Main identifier for a plan might be its text content or a dedicated ID
+        sh:datatype xsd:string ;
         sh:minCount 1 ;
-        sh:message "InspectionPlan must have a label" ;
+        sh:maxCount 1 ;
+        sh:message "InspectionPlan must have exactly one ndt:planText." ;
+    ] ;
+    sh:property [
+        sh:path ndt:timestamp ;
+        sh:datatype xsd:dateTime ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "InspectionPlan must have exactly one ndt:timestamp." ;
+    ] .
+
+#######################
+# ProposedFact Shape
+#######################
+ndt:ProposedFactShape a sh:NodeShape ;
+    sh:targetClass ndt:ProposedFact ;
+    sh:property [
+        sh:path ndt:factId ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "ProposedFact must have exactly one ndt:factId." ;
+    ] ;
+    sh:property [
+        sh:path ndt:status ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "ProposedFact must have a status." ;
+    ] ;
+    sh:property [
+        sh:path ndt:confidence ;
+        sh:datatype xsd:float ;
+        sh:minCount 0 ; # Confidence might be optional initially
+        sh:maxCount 1 ;
+        sh:message "ProposedFact can have at most one ndt:confidence." ;
     ] .

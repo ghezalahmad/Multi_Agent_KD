@@ -1,0 +1,181 @@
+@prefix : <http://example.org/ndt#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<http://example.org/ndt> rdf:type owl:Ontology ;
+    rdfs:comment "Ontology for Non-Destructive Testing (NDT) planning." .
+
+#################################################################
+#    Object Properties
+#################################################################
+
+###  http://example.org/ndt#causesPhysicalChange
+:causesPhysicalChange rdf:type owl:ObjectProperty ;
+    rdfs:domain :DeteriorationMechanism ;
+    rdfs:range :PhysicalChange ;
+    rdfs:comment "Links a deterioration mechanism to a resulting physical change." .
+
+###  http://example.org/ndt#detectedBy
+:detectedBy rdf:type owl:ObjectProperty ;
+    rdfs:domain [ rdf:type owl:Class ;
+            owl:unionOf ( :Deterioration
+                          :PhysicalChange
+                        )
+          ] ;
+    rdfs:range :NDTMethod ;
+    rdfs:comment "Links a deterioration or physical change to an NDT method that can detect it." .
+
+###  http://example.org/ndt#hasDeteriorationMechanism
+:hasDeteriorationMechanism rdf:type owl:ObjectProperty ;
+    rdfs:domain :Material ;
+    rdfs:range [ rdf:type owl:Class ;
+            owl:unionOf ( :Deterioration
+                          :DeteriorationMechanism
+                        )
+          ] ;
+    rdfs:comment "Links a material to a deterioration mechanism or a general deterioration it is susceptible to." .
+
+###  http://example.org/ndt#recommendedFor
+:recommendedFor rdf:type owl:ObjectProperty ;
+    rdfs:domain :Sensor ;
+    rdfs:range :NDTMethod ;
+    rdfs:comment "Indicates an NDT method for which a sensor is recommended." .
+
+###  http://example.org/ndt#requiresEnvironment
+:requiresEnvironment rdf:type owl:ObjectProperty ;
+    rdfs:domain :NDTMethod ;
+    rdfs:range :Environment ;
+    rdfs:comment "Specifies a suitable environment required for an NDT method." .
+
+###  http://example.org/ndt#proposesLink
+:proposesLink rdf:type owl:ObjectProperty ;
+    rdfs:domain :ProposedFact ;
+    rdfs:range owl:Thing ;
+    rdfs:comment "Links a proposed fact to an entity (Material, Deterioration, NDTMethod) involved in the proposal. Use sub-properties for specific links if needed." .
+
+#################################################################
+#    Data Properties
+#################################################################
+
+###  http://example.org/ndt#confidence
+:confidence rdf:type owl:DatatypeProperty ;
+    rdfs:domain :ProposedFact ;
+    rdfs:range xsd:float ;
+    rdfs:comment "Confidence score for a proposed fact." .
+
+###  http://example.org/ndt#defectName
+:defectName rdf:type owl:DatatypeProperty ;
+    rdfs:domain :InspectionPlan ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Name of the defect recorded in an inspection plan." .
+
+###  http://example.org/ndt#environmentName
+:environmentName rdf:type owl:DatatypeProperty ;
+    rdfs:domain :InspectionPlan ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Name of the environment recorded in an inspection plan." .
+
+###  http://example.org/ndt#factId
+:factId rdf:type owl:DatatypeProperty ;
+    rdfs:domain :ProposedFact ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Unique identifier for a proposed fact." .
+
+###  http://example.org/ndt#materialName
+:materialName rdf:type owl:DatatypeProperty ;
+    rdfs:domain :InspectionPlan ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Name of the material recorded in an inspection plan." .
+
+###  http://example.org/ndt#methodName
+:methodName rdf:type owl:DatatypeProperty ;
+    rdfs:domain :ProposedFact ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Name of the NDT method in a proposed fact." .
+
+###  http://example.org/ndt#name
+:name rdf:type owl:DatatypeProperty ;
+    rdfs:subPropertyOf rdfs:label ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Primary name or label for an entity." .
+
+###  http://example.org/ndt#planText
+:planText rdf:type owl:DatatypeProperty ;
+    rdfs:domain :InspectionPlan ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Textual content of an inspection plan." .
+
+###  http://example.org/ndt#source
+:source rdf:type owl:DatatypeProperty ;
+    rdfs:domain :ProposedFact ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Source of a proposed fact (e.g., 'LLM inference', 'User input')." .
+
+###  http://example.org/ndt#status
+:status rdf:type owl:DatatypeProperty ;
+    rdfs:domain :ProposedFact ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Status of a proposed fact (e.g., 'pending', 'approved', 'rejected')." .
+
+###  http://example.org/ndt#timestamp
+:timestamp rdf:type owl:DatatypeProperty ;
+    rdfs:domain :InspectionPlan ;
+    rdfs:range xsd:dateTime ;
+    rdfs:comment "Timestamp of when an inspection plan was created or a fact proposed." .
+
+###  http://example.org/ndt#proposedMaterialName
+:proposedMaterialName rdf:type owl:DatatypeProperty;
+  rdfs:domain :ProposedFact;
+  rdfs:range xsd:string;
+  rdfs:comment "Name of the material in a proposed fact." .
+
+###  http://example.org/ndt#proposedDefectName
+:proposedDefectName rdf:type owl:DatatypeProperty;
+  rdfs:domain :ProposedFact;
+  rdfs:range xsd:string;
+  rdfs:comment "Name of the defect in a proposed fact." .
+
+#################################################################
+#    Classes
+#################################################################
+
+###  http://example.org/ndt#Deterioration
+:Deterioration rdf:type owl:Class ;
+    rdfs:comment "A general type or category of deterioration or defect observed in a material (e.g., Corrosion, Cracking)." .
+
+###  http://example.org/ndt#DeteriorationMechanism
+:DeteriorationMechanism rdf:type owl:Class ;
+    rdfs:comment "The underlying process or cause of deterioration (e.g., freeze-thaw cycles, chemical attack)." .
+
+###  http://example.org/ndt#Environment
+:Environment rdf:type owl:Class ;
+    rdfs:comment "The environmental conditions relevant to NDT methods or material deterioration." .
+
+###  http://example.org/ndt#InspectionPlan
+:InspectionPlan rdf:type owl:Class ;
+    rdfs:comment "A record of an inspection plan, including context and findings." .
+
+###  http://example.org/ndt#Material
+:Material rdf:type owl:Class ;
+    rdfs:comment "A type of material being inspected (e.g., Concrete, Steel)." .
+
+###  http://example.org/ndt#NDTMethod
+:NDTMethod rdf:type owl:Class ;
+    rdfs:comment "A Non-Destructive Testing method (e.g., Ultrasonic Testing, GPR)." .
+
+###  http://example.org/ndt#PhysicalChange
+:PhysicalChange rdf:type owl:Class ;
+    rdfs:comment "An observable physical manifestation of deterioration (e.g., cracking, spalling, thinning)." .
+
+###  http://example.org/ndt#ProposedFact
+:ProposedFact rdf:type owl:Class ;
+    rdfs:comment "A fact about NDT that has been proposed (e.g., by an LLM or user) and is awaiting review." .
+
+###  http://example.org/ndt#Sensor
+:Sensor rdf:type owl:Class ;
+    rdfs:comment "A type of sensor used in conjunction with NDT methods." .
+
+###  Generated by the OWL API (version 4.5.26.2023-07-17T20:34:13Z) https://github.com/owlcs/owlapi
