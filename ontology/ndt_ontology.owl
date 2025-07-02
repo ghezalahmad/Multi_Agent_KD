@@ -193,6 +193,12 @@
     rdfs:range xsd:string ;
     rdfs:comment "A textual note on material applicability for an NDT method (e.g., 'Less effective on highly attenuative materials')." .
 
+###  http://example.org/ndt#methodLimitations
+:methodLimitations rdf:type owl:DatatypeProperty ;
+    rdfs:domain :NDTMethod ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Describes known limitations or contraindications of an NDT method (e.g., 'Not suitable for non-metallic materials', 'Requires extensive surface preparation')." .
+
 #################################################################
 #    Classes
 #################################################################
