@@ -161,6 +161,13 @@ ndt:NDTMethodShape a sh:NodeShape ;
         sh:minCount 0 ;
         sh:maxCount 1 ;
         sh:message "NDTMethod applicableMaterialsNote should be a string." ;
+    ] ;
+    sh:property [
+        sh:path ndt:methodLimitations ;
+        sh:datatype xsd:string ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+        sh:message "NDTMethod methodLimitations should be a string." ;
     ] .
 
 #######################

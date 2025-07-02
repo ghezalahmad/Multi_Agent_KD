@@ -250,7 +250,8 @@ class KGInterface:
                        n.costEstimate AS costEstimate,
                        n.methodCategory AS methodCategory,
                        n.detectionCapabilities AS detectionCapabilities,
-                       n.applicableMaterialsNote AS applicableMaterialsNote
+                       n.applicableMaterialsNote AS applicableMaterialsNote,
+                       n.methodLimitations AS methodLimitations
                 LIMIT 1
                 """
                 method_details = self.cypher(query_method, {"method_name": method_name})
@@ -267,6 +268,8 @@ class KGInterface:
                         context_parts.append(f"  Detection Capabilities: {m_details['detectionCapabilities']}")
                     if m_details.get("applicableMaterialsNote"):
                         context_parts.append(f"  Applicable Materials Note: {m_details['applicableMaterialsNote']}")
+                    if m_details.get("methodLimitations"):
+                        context_parts.append(f"  Method Limitations: {m_details['methodLimitations']}")
 
         if not context_parts:
             return "No specific details found in KG for the provided entities."

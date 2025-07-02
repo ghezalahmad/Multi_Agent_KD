@@ -11,6 +11,7 @@ from utils.forecast_chart import render_forecast_chart
 from agents.planner_agent import PlannerAgent
 from agents.tool_agent import ToolSelectorAgent
 from agents.forecaster_agent import ForecasterAgent
+from agents.critique_agent import CritiqueAgent # Added import
 from kg_interface import KGInterface
 import sys # Already imported, but kept for safety if original was different
 from utils.gantt_chart import render_gantt_chart
@@ -184,7 +185,8 @@ def seed_knowledge_graph():
 
     MERGE (n1:NDTMethod {name: "Ultrasonic Testing"})
         SET n1.description = "Uses high-frequency sound waves to detect internal flaws and characterize material thickness.", n1.costEstimate = "Medium", n1.methodCategory = "Volumetric",
-            n1.detectionCapabilities = "Detects internal and surface flaws like cracks, voids, and delaminations; measures thickness.", n1.applicableMaterialsNote = "Requires good acoustic coupling; highly attenuative or geometrically complex materials can be challenging."
+            n1.detectionCapabilities = "Detects internal and surface flaws like cracks, voids, and delaminations; measures thickness.", n1.applicableMaterialsNote = "Requires good acoustic coupling; highly attenuative or geometrically complex materials can be challenging.",
+            n1.methodLimitations = "Requires skilled operator; surface must be accessible and relatively smooth; not ideal for very thin materials or complex geometries without specialized techniques."
     MERGE (n2:NDTMethod {name: "GPR"})
         SET n2.description = "Ground Penetrating Radar uses electromagnetic waves to image the subsurface.", n2.costEstimate = "High", n2.methodCategory = "Volumetric" // No new properties added here for brevity in example
     MERGE (n3:NDTMethod {name: "Thermography"})
@@ -193,7 +195,8 @@ def seed_knowledge_graph():
         SET n4.description = "Passively listens for energy releases (acoustic emissions) from active cracks or defects under stress.", n4.costEstimate = "High", n4.methodCategory = "Volumetric" // No new properties added here
     MERGE (n5:NDTMethod {name: "Visual Inspection"})
         SET n5.description = "The oldest and most common NDT method, relying on direct observation of the material surface.", n5.costEstimate = "Low", n5.methodCategory = "Surface",
-            n5.detectionCapabilities = "Detects surface-breaking defects, discoloration, and gross anomalies visible to the naked eye or with low magnification.", n5.applicableMaterialsNote = "Effectiveness depends on surface condition, lighting, and inspector skill. May require surface cleaning."
+            n5.detectionCapabilities = "Detects surface-breaking defects, discoloration, and gross anomalies visible to the naked eye or with low magnification.", n5.applicableMaterialsNote = "Effectiveness depends on surface condition, lighting, and inspector skill. May require surface cleaning.",
+            n5.methodLimitations = "Only detects surface-breaking defects; cannot determine internal structure or depth of defects; effectiveness highly dependent on lighting, access, and inspector acuity. May require surface cleaning for optimal results."
 
     MERGE (s1:Sensor {name: "Acoustic Sensor"})
     MERGE (s2:Sensor {name: "Thermal Camera"})
@@ -226,6 +229,7 @@ if "loop" not in st.session_state:
     st.session_state.plan   = PlannerAgent()
     st.session_state.tools  = ToolSelectorAgent()
     st.session_state.fore   = ForecasterAgent()
+    st.session_state.critique = CritiqueAgent() # Added CritiqueAgent
 
 # Create a sidebar for navigation and stats
 with st.sidebar:
@@ -312,6 +316,55 @@ with tab1:
                 <p>{tools_summary_tab1_html}</p>
             </div>
             """, unsafe_allow_html=True)
+
+        # --- Critique Agent Run (Tab 1) ---
+        with st.spinner("CritiqueAgent reviewing recommendations..."):
+            # Prepare context for CritiqueAgent
+            # Need material, defect, environment. ToolSelectorAgent's 'run' method extracts these.
+            # We need to re-extract or have ToolSelectorAgent return them.
+            # For now, let's assume ToolSelectorAgent's summary_text might contain them,
+            # or we pass what we have from user_input and planner_output.
+            # A more robust solution would be for ToolSelectorAgent to also return extracted entities.
+
+            # Fetch RAG details for the recommended methods
+            rag_details_for_critique_tab1 = ""
+            if recommended_methods_tab1_list:
+                # Extract material/defect from planner_agent_output_tab1 or user_input for RAG context
+                # This is a simplification; ideally, entities are more formally passed.
+                temp_material_for_rag = user_input # Simplification
+                temp_defect_for_rag = user_input   # Simplification
+
+                # A simple way to get some material/defect context for RAG if not explicitly available:
+                # We could try a simple LLM call here to extract from user_input if needed,
+                # but let's keep it simpler for now and rely on the names being in the method list.
+                # The KGInterface().get_entities_details_for_rag() can handle None for material/defect if needed.
+
+                rag_details_for_critique_tab1 = KGInterface().get_entities_details_for_rag(
+                    # material_name= extracted_material, # Ideally from ToolSelectorAgent
+                    # defect_name= extracted_defect,     # Ideally from ToolSelectorAgent
+                    method_names=recommended_methods_tab1_list
+                )
+
+            critique_context_tab1 = (
+                f"**Scenario:**\n"
+                f"User Input: {user_input}\n" # Provides some context for material/defect/env
+                f"Planner Output: {plan_agent_output_tab1}\n\n"
+                f"**Proposed NDT Approach by ToolSelectorAgent:**\n"
+                f"Summary Text: {tools_summary_tab1}\n"
+                f"Recommended Method Names: {', '.join(recommended_methods_tab1_list)}\n\n"
+                f"**Detailed NDT Method Information (from Knowledge Graph for RAG):**\n"
+                f"{rag_details_for_critique_tab1}"
+            )
+
+            critique_output_tab1 = loop.run_until_complete(st.session_state.critique.run(critique_context_tab1))
+            critique_output_tab1_html = critique_output_tab1.replace('\n', '<br>')
+            st.markdown(f"""
+            <div class="agent-section" style="background-color: #f0f0f0; border-left: 4px solid #777;">
+                <h4>🕵️‍♂️ Critique & Considerations</h4>
+                <p>{critique_output_tab1_html}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        # --- End Critique Agent Run (Tab 1) ---
 
         forecast_text_tab1 = ""
         with st.spinner("ForecasterAgent running..."):
@@ -425,6 +478,36 @@ with tab2:
                 </div>
                 """, unsafe_allow_html=True)
                 st.code(plan_summary_tab2, language="markdown")
+
+            # --- Critique Agent Run (Tab 2) ---
+            with st.spinner("CritiqueAgent reviewing recommendations..."):
+                rag_details_for_critique_tab2 = KGInterface().get_entities_details_for_rag(
+                    material_name=material,
+                    defect_name=deterioration,
+                    method_names=recommended_methods_tab2_list
+                )
+
+                critique_context_tab2 = (
+                    f"**Scenario:**\n"
+                    f"Material: {material}\n"
+                    f"Defect/Observation: {deterioration}\n"
+                    f"Environment: {environment}\n\n"
+                    f"**Proposed NDT Approach by ToolSelectorAgent:**\n"
+                    f"Summary Text: {plan_summary_tab2}\n" # This is tool_agent_output_tab2['summary_text']
+                    f"Recommended Method Names: {', '.join(recommended_methods_tab2_list)}\n\n"
+                    f"**Detailed NDT Method Information (from Knowledge Graph for RAG):**\n"
+                    f"{rag_details_for_critique_tab2}"
+                )
+
+                critique_output_tab2 = loop.run_until_complete(st.session_state.critique.run(critique_context_tab2))
+                critique_output_tab2_html = critique_output_tab2.replace('\n', '<br>')
+                st.markdown(f"""
+                <div class="agent-section" style="background-color: #f0f0f0; border-left: 4px solid #777;">
+                    <h4>🕵️‍♂️ Critique & Considerations</h4>
+                    <p>{critique_output_tab2_html}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            # --- End Critique Agent Run (Tab 2) ---
 
             forecast_text_tab2 = ""
             with st.spinner("ForecasterAgent modeling damage evolution..."):
