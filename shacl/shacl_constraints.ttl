@@ -168,6 +168,13 @@ ndt:NDTMethodShape a sh:NodeShape ;
         sh:minCount 0 ;
         sh:maxCount 1 ;
         sh:message "NDTMethod methodLimitations should be a string." ;
+    ] ;
+    sh:property [ # Added for hasPotentialRisk
+        sh:path ndt:hasPotentialRisk ;
+        sh:nodeKind sh:IRI ;
+        sh:class ndt:RiskType ; # Ensures it links to an instance of RiskType
+        sh:minCount 0 ; # An NDT method may have zero or more potential risks
+        sh:message "NDTMethod's hasPotentialRisk must be an IRI linking to a RiskType." ;
     ] .
 
 #######################
@@ -247,4 +254,31 @@ ndt:ProposedFactShape a sh:NodeShape ;
         sh:minCount 0 ; # Confidence might be optional initially
         sh:maxCount 1 ;
         sh:message "ProposedFact can have at most one ndt:confidence." ;
+    ] .
+
+#######################
+# RiskType Shape
+#######################
+ndt:RiskTypeShape a sh:NodeShape ;
+    sh:targetClass ndt:RiskType ;
+    sh:property [
+        sh:path ndt:name ; # Assuming RiskType instances will also have a name/label
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "RiskType must have exactly one ndt:name." ;
+    ] ;
+    sh:property [
+        sh:path ndt:riskDescription ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ; # Description should be mandatory for a risk type
+        sh:maxCount 1 ;
+        sh:message "RiskType must have exactly one ndt:riskDescription." ;
+    ] ;
+    sh:property [
+        sh:path ndt:mitigationSuggestion ;
+        sh:datatype xsd:string ;
+        sh:minCount 0 ; # Mitigation might be optional
+        sh:maxCount 1 ;
+        sh:message "RiskType can have at most one ndt:mitigationSuggestion." ;
     ] .

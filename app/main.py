@@ -11,9 +11,9 @@ from utils.forecast_chart import render_forecast_chart
 from agents.planner_agent import PlannerAgent
 from agents.tool_agent import ToolSelectorAgent
 from agents.forecaster_agent import ForecasterAgent
-from agents.critique_agent import CritiqueAgent # Added import
+from agents.critique_agent import CritiqueAgent
+from agents.risk_assessment_agent import RiskAssessmentAgent # Added
 from kg_interface import KGInterface
-import sys # Already imported, but kept for safety if original was different
 from utils.gantt_chart import render_gantt_chart
 
 
@@ -171,11 +171,7 @@ def seed_knowledge_graph():
     MERGE (d3:Deterioration {name: "Delamination"})
         SET d3.detailedDescription = "The separation of layers in a composite material or laminated structure, or layers of concrete from a substrate. Can be caused by impact, moisture, or thermal stresses."
 
-    // Example for a PhysicalChange node (assuming ex:node115 is 'spalling' as per kg_export.ttl)
-    // If ex:node115 does not exist or is not spalling, this MERGE might create a new node or do nothing.
-    // A more robust way would be to MERGE based on name if 'spalling' is a PhysicalChange.
-    // For now, let's assume we ensure 'spalling' PhysicalChange node exists with this description.
-    MERGE (pc1:PhysicalChange {name: "Spalling"}) // Assuming 'Spalling' is a desired PhysicalChange node name
+    MERGE (pc1:PhysicalChange {name: "Spalling"})
         SET pc1.detailedDescription = "The flaking or chipping away of a material's surface, often seen in concrete due to corrosion of rebar or freeze-thaw cycles."
 
     MERGE (e1:Environment {name: "Humid"})
@@ -188,19 +184,32 @@ def seed_knowledge_graph():
             n1.detectionCapabilities = "Detects internal and surface flaws like cracks, voids, and delaminations; measures thickness.", n1.applicableMaterialsNote = "Requires good acoustic coupling; highly attenuative or geometrically complex materials can be challenging.",
             n1.methodLimitations = "Requires skilled operator; surface must be accessible and relatively smooth; not ideal for very thin materials or complex geometries without specialized techniques."
     MERGE (n2:NDTMethod {name: "GPR"})
-        SET n2.description = "Ground Penetrating Radar uses electromagnetic waves to image the subsurface.", n2.costEstimate = "High", n2.methodCategory = "Volumetric" // No new properties added here for brevity in example
+        SET n2.description = "Ground Penetrating Radar uses electromagnetic waves to image the subsurface.", n2.costEstimate = "High", n2.methodCategory = "Volumetric"
     MERGE (n3:NDTMethod {name: "Thermography"})
-        SET n3.description = "Infrared thermography detects temperature differences to find defects like delaminations or moisture.", n3.costEstimate = "Medium", n3.methodCategory = "Surface" // No new properties added here for brevity
-    MERGE (n4:NDTMethod {name: "Acoustic Emission"})
-        SET n4.description = "Passively listens for energy releases (acoustic emissions) from active cracks or defects under stress.", n4.costEstimate = "High", n4.methodCategory = "Volumetric" // No new properties added here
+        SET n3.description = "Infrared thermography detects temperature differences to find defects like delaminations or moisture.", n3.costEstimate = "Medium", n3.methodCategory = "Surface"
     MERGE (n5:NDTMethod {name: "Visual Inspection"})
         SET n5.description = "The oldest and most common NDT method, relying on direct observation of the material surface.", n5.costEstimate = "Low", n5.methodCategory = "Surface",
             n5.detectionCapabilities = "Detects surface-breaking defects, discoloration, and gross anomalies visible to the naked eye or with low magnification.", n5.applicableMaterialsNote = "Effectiveness depends on surface condition, lighting, and inspector skill. May require surface cleaning.",
             n5.methodLimitations = "Only detects surface-breaking defects; cannot determine internal structure or depth of defects; effectiveness highly dependent on lighting, access, and inspector acuity. May require surface cleaning for optimal results."
+    MERGE (n4:NDTMethod {name: "Acoustic Emission"})
+        SET n4.description = "Passively listens for energy releases (acoustic emissions) from active cracks or defects under stress.", n4.costEstimate = "High", n4.methodCategory = "Volumetric"
 
     MERGE (s1:Sensor {name: "Acoustic Sensor"})
     MERGE (s2:Sensor {name: "Thermal Camera"})
     MERGE (s3:Sensor {name: "Moisture Sensor"})
+
+    MERGE (risk1:RiskType {name: "Safety Hazard - Working at Heights"})
+        SET risk1.riskDescription = "Risk of falls or injury when inspecting structures at significant heights without proper safety equipment or procedures.",
+            risk1.mitigationSuggestion = "Use scaffolding, aerial work platforms, fall arrest systems. Ensure personnel are trained for working at heights."
+    MERGE (risk2:RiskType {name: "Material Contamination Risk"})
+        SET risk2.riskDescription = "Some NDT methods (e.g., certain penetrants or couplants) may leave residues that could contaminate sensitive materials or affect subsequent processes.",
+            risk2.mitigationSuggestion = "Use approved, low-residue consumables. Perform thorough post-inspection cleaning procedures."
+    MERGE (risk3:RiskType {name: "Equipment Accessibility Issue"})
+        SET risk3.riskDescription = "The inspection area may be difficult to access with bulky NDT equipment or require extensive setup.",
+            risk3.mitigationSuggestion = "Plan access routes. Use portable or miniaturized equipment if available. Consider remote inspection techniques."
+
+    MERGE (n1)-[:hasPotentialRisk]->(risk3)
+    MERGE (n5)-[:hasPotentialRisk]->(risk1)
 
     MERGE (m)-[:HAS_DETERIORATION_MECHANISM]->(d1)
     MERGE (m)-[:HAS_DETERIORATION_MECHANISM]->(d2)
@@ -229,7 +238,8 @@ if "loop" not in st.session_state:
     st.session_state.plan   = PlannerAgent()
     st.session_state.tools  = ToolSelectorAgent()
     st.session_state.fore   = ForecasterAgent()
-    st.session_state.critique = CritiqueAgent() # Added CritiqueAgent
+    st.session_state.critique = CritiqueAgent()
+    st.session_state.risk = RiskAssessmentAgent() # Added RiskAssessmentAgent
 
 # Create a sidebar for navigation and stats
 with st.sidebar:
@@ -243,7 +253,7 @@ with st.sidebar:
         for row in counts:
             st.markdown(f"""
             <div class="icon-text">
-                <span>{'📦' if row['label'] == 'Material' else '🔍' if row['label'] == 'NDTMethod' else '🌡️' if row['label'] == 'Environment' else '💢' if row['label'] == 'Deterioration' else '📡' if row['label'] == 'Sensor' else '📌'}</span>
+                <span>{'📦' if row['label'] == 'Material' else '🔍' if row['label'] == 'NDTMethod' else '🌡️' if row['label'] == 'Environment' else '💢' if row['label'] == 'Deterioration' else '📡' if row['label'] == 'Sensor' else 'ρίσκο' if row['label'] == 'RiskType' else '📌'}</span>
                 <span><b>{row['label']}:</b></span>
                 <span class="badge">{row['count']}</span>
             </div>
@@ -292,6 +302,7 @@ with tab1:
     
     if user_input and run_nl:
         loop = st.session_state.loop
+        kg_instance_tab1 = KGInterface() # Instance for KG calls in this tab
 
         st.markdown("#### Inspection Planning Process")
         
@@ -317,45 +328,19 @@ with tab1:
             </div>
             """, unsafe_allow_html=True)
 
-        # --- Critique Agent Run (Tab 1) ---
         with st.spinner("CritiqueAgent reviewing recommendations..."):
-            # Prepare context for CritiqueAgent
-            # Need material, defect, environment. ToolSelectorAgent's 'run' method extracts these.
-            # We need to re-extract or have ToolSelectorAgent return them.
-            # For now, let's assume ToolSelectorAgent's summary_text might contain them,
-            # or we pass what we have from user_input and planner_output.
-            # A more robust solution would be for ToolSelectorAgent to also return extracted entities.
-
-            # Fetch RAG details for the recommended methods
             rag_details_for_critique_tab1 = ""
             if recommended_methods_tab1_list:
-                # Extract material/defect from planner_agent_output_tab1 or user_input for RAG context
-                # This is a simplification; ideally, entities are more formally passed.
-                temp_material_for_rag = user_input # Simplification
-                temp_defect_for_rag = user_input   # Simplification
-
-                # A simple way to get some material/defect context for RAG if not explicitly available:
-                # We could try a simple LLM call here to extract from user_input if needed,
-                # but let's keep it simpler for now and rely on the names being in the method list.
-                # The KGInterface().get_entities_details_for_rag() can handle None for material/defect if needed.
-
-                rag_details_for_critique_tab1 = KGInterface().get_entities_details_for_rag(
-                    # material_name= extracted_material, # Ideally from ToolSelectorAgent
-                    # defect_name= extracted_defect,     # Ideally from ToolSelectorAgent
+                rag_details_for_critique_tab1 = kg_instance_tab1.get_entities_details_for_rag(
                     method_names=recommended_methods_tab1_list
+                    # Material & defect names for RAG in Tab 1 are implicitly part of user_input/planner_output
+                    # get_entities_details_for_rag can handle None for material/defect names
                 )
-
             critique_context_tab1 = (
-                f"**Scenario:**\n"
-                f"User Input: {user_input}\n" # Provides some context for material/defect/env
-                f"Planner Output: {plan_agent_output_tab1}\n\n"
-                f"**Proposed NDT Approach by ToolSelectorAgent:**\n"
-                f"Summary Text: {tools_summary_tab1}\n"
-                f"Recommended Method Names: {', '.join(recommended_methods_tab1_list)}\n\n"
-                f"**Detailed NDT Method Information (from Knowledge Graph for RAG):**\n"
-                f"{rag_details_for_critique_tab1}"
+                f"**Scenario Context (from user input & planner):**\nUser Input: {user_input}\nPlanner Output: {plan_agent_output_tab1}\n\n"
+                f"**Proposed NDT Approach by ToolSelectorAgent:**\n{tools_summary_tab1}\n" # summary_text already contains method names
+                f"**Detailed NDT Method Information (from Knowledge Graph for RAG):**\n{rag_details_for_critique_tab1}"
             )
-
             critique_output_tab1 = loop.run_until_complete(st.session_state.critique.run(critique_context_tab1))
             critique_output_tab1_html = critique_output_tab1.replace('\n', '<br>')
             st.markdown(f"""
@@ -364,11 +349,29 @@ with tab1:
                 <p>{critique_output_tab1_html}</p>
             </div>
             """, unsafe_allow_html=True)
-        # --- End Critique Agent Run (Tab 1) ---
+
+        with st.spinner("RiskAssessmentAgent analyzing potential risks..."):
+            rag_details_for_risk_tab1 = rag_details_for_critique_tab1 # Reuse RAG details which now include risks
+            risk_context_tab1 = (
+                f"**Scenario Context (from user input & planner):**\nUser Input: {user_input}\nPlanner Output: {plan_agent_output_tab1}\n\n"
+                f"**Proposed NDT Methods:** {', '.join(recommended_methods_tab1_list)}\n\n"
+                f"**Detailed NDT Method Information (including potential risks from KG):**\n{rag_details_for_risk_tab1}"
+            )
+            risk_output_tab1 = loop.run_until_complete(st.session_state.risk.run(risk_context_tab1))
+            risk_output_tab1_html = risk_output_tab1.replace('\n', '<br>')
+            st.markdown(f"""
+            <div class="agent-section" style="background-color: #fff0f0; border-left: 4px solid #c00;">
+                <h4>⚠️ Potential Risk Analysis</h4>
+                <p>{risk_output_tab1_html}</p>
+            </div>
+            """, unsafe_allow_html=True)
 
         forecast_text_tab1 = ""
         with st.spinner("ForecasterAgent running..."):
-            forecast_text_tab1 = loop.run_until_complete(st.session_state.fore.run(tools_summary_tab1))
+            # Context for forecaster should ideally include selected NDT methods.
+            # For now, using ToolSelector's summary.
+            forecaster_context_tab1 = f"{tools_summary_tab1}\nCritique: {critique_output_tab1}\nRisks: {risk_output_tab1}"
+            forecast_text_tab1 = loop.run_until_complete(st.session_state.fore.run(forecaster_context_tab1))
             forecast_text_tab1_html = forecast_text_tab1.replace('\n', '<br>')
             st.markdown(f"""
             <div class="agent-section forecaster-agent">
@@ -395,14 +398,14 @@ with tab1:
             )
             if st.button("Re-run Forecast for Selected", key="rerun_forecast_tab1"):
                 if selected_methods_tab1:
-                    focused_context_tab1 = (
+                    focused_context_tab1_rerun = (
                         f"Focusing on NDT methods: {', '.join(selected_methods_tab1)}.\n"
                         f"Original user query: {user_input}\n"
                         f"Initial plan context: {plan_agent_output_tab1}\n"
-                        f"Tool selection context: {tools_summary_tab1}"
+                        f"Tool selection context: {tools_summary_tab1}" # Original tool summary
                     )
                     with st.spinner("ForecasterAgent running focused forecast..."):
-                        focused_forecast_tab1 = loop.run_until_complete(st.session_state.fore.run(focused_context_tab1))
+                        focused_forecast_tab1 = loop.run_until_complete(st.session_state.fore.run(focused_context_tab1_rerun))
                         st.markdown("##### Focused Forecast Results:")
                         st.code(focused_forecast_tab1, language="markdown")
                 else:
@@ -416,7 +419,7 @@ with tab1:
             fb_col1_t1, fb_col2_t1 = st.columns(2)
             with fb_col1_t1:
                 if st.button("👍 Yes", key="helpful_tab1", use_container_width=True):
-                    KGInterface().log_plan_feedback(plan_identifier=forecast_text_tab1, is_helpful=True)
+                    KGInterface().log_plan_feedback(plan_identifier=forecast_text_tab1, is_helpful=True) # Still uses forecast as ID for Tab 1
                     st.toast("🙏 Thank you for your feedback!", icon="👍")
             with fb_col2_t1:
                 if st.button("👎 No", key="unhelpful_tab1", use_container_width=True):
@@ -432,10 +435,10 @@ with tab2:
     </div>
     """, unsafe_allow_html=True)
 
-    kg_tab2 = KGInterface()
-    material_options = kg_tab2.get_materials()
-    deterioration_options = kg_tab2.get_deterioration_types()
-    environment_options = kg_tab2.get_environments()
+    kg_tab2_instance = KGInterface()
+    material_options = kg_tab2_instance.get_materials()
+    deterioration_options = kg_tab2_instance.get_deterioration_types()
+    environment_options = kg_tab2_instance.get_environments()
     
     col1_kg, col2_kg, col3_kg = st.columns(3)
 
@@ -479,26 +482,20 @@ with tab2:
                 """, unsafe_allow_html=True)
                 st.code(plan_summary_tab2, language="markdown")
 
-            # --- Critique Agent Run (Tab 2) ---
             with st.spinner("CritiqueAgent reviewing recommendations..."):
-                rag_details_for_critique_tab2 = KGInterface().get_entities_details_for_rag(
+                rag_details_for_critique_tab2 = kg_tab2_instance.get_entities_details_for_rag(
                     material_name=material,
                     defect_name=deterioration,
                     method_names=recommended_methods_tab2_list
                 )
-
                 critique_context_tab2 = (
                     f"**Scenario:**\n"
                     f"Material: {material}\n"
                     f"Defect/Observation: {deterioration}\n"
                     f"Environment: {environment}\n\n"
-                    f"**Proposed NDT Approach by ToolSelectorAgent:**\n"
-                    f"Summary Text: {plan_summary_tab2}\n" # This is tool_agent_output_tab2['summary_text']
-                    f"Recommended Method Names: {', '.join(recommended_methods_tab2_list)}\n\n"
-                    f"**Detailed NDT Method Information (from Knowledge Graph for RAG):**\n"
-                    f"{rag_details_for_critique_tab2}"
+                    f"**Proposed NDT Approach by ToolSelectorAgent:**\n{plan_summary_tab2}\n"
+                    f"**Detailed NDT Method Information (from Knowledge Graph for RAG):**\n{rag_details_for_critique_tab2}"
                 )
-
                 critique_output_tab2 = loop.run_until_complete(st.session_state.critique.run(critique_context_tab2))
                 critique_output_tab2_html = critique_output_tab2.replace('\n', '<br>')
                 st.markdown(f"""
@@ -507,7 +504,23 @@ with tab2:
                     <p>{critique_output_tab2_html}</p>
                 </div>
                 """, unsafe_allow_html=True)
-            # --- End Critique Agent Run (Tab 2) ---
+
+            with st.spinner("RiskAssessmentAgent analyzing potential risks..."):
+                # RAG details already include risk information due to previous step
+                rag_details_for_risk_tab2 = rag_details_for_critique_tab2
+                risk_context_tab2 = (
+                    f"**Scenario Context:**\nMaterial: {material}\nDefect/Observation: {deterioration}\nEnvironment: {environment}\n\n"
+                    f"**Proposed NDT Methods:** {', '.join(recommended_methods_tab2_list)}\n\n"
+                    f"**Detailed NDT Method Information (including potential risks from KG):**\n{rag_details_for_risk_tab2}"
+                )
+                risk_output_tab2 = loop.run_until_complete(st.session_state.risk.run(risk_context_tab2))
+                risk_output_tab2_html = risk_output_tab2.replace('\n', '<br>')
+                st.markdown(f"""
+                <div class="agent-section" style="background-color: #fff0f0; border-left: 4px solid #c00;">
+                    <h4>⚠️ Potential Risk Analysis</h4>
+                    <p>{risk_output_tab2_html}</p>
+                </div>
+                """, unsafe_allow_html=True)
 
             forecast_text_tab2 = ""
             with st.spinner("ForecasterAgent modeling damage evolution..."):
@@ -516,14 +529,15 @@ with tab2:
                 Defect: {deterioration}
                 Environment: {environment}
                 Recommended NDT Methods by ToolSelector: {', '.join(recommended_methods_tab2_list) if recommended_methods_tab2_list else "None specified"}
+                Critique: {critique_output_tab2}
+                Risks: {risk_output_tab2}
                 """
                 forecast_text_tab2 = loop.run_until_complete(st.session_state.fore.run(forecast_context_tab2_initial))
 
-                plan_id_tab2 = kg_tab2.log_inspection_plan(plan_summary_tab2, material, deterioration, environment)
+                plan_id_tab2 = kg_tab2_instance.log_inspection_plan(plan_summary_tab2, material, deterioration, environment)
                 if 'current_plan_id_tab2' not in st.session_state:
                     st.session_state.current_plan_id_tab2 = None
                 st.session_state.current_plan_id_tab2 = plan_id_tab2
-
 
                 st.markdown("""
                 <div class="dashboard-card">
@@ -545,12 +559,12 @@ with tab2:
                     )
                     if st.button("Re-run Forecast for Selected", key="rerun_forecast_tab2"):
                         if selected_methods_tab2:
-                            focused_context_tab2 = (
+                            focused_context_tab2_rerun = (
                                 f"Focusing on NDT methods: {', '.join(selected_methods_tab2)}.\n"
                                 f"Original context: Material: {material}, Defect: {deterioration}, Environment: {environment}"
                             )
                             with st.spinner("ForecasterAgent running focused forecast..."):
-                                focused_forecast_tab2 = loop.run_until_complete(st.session_state.fore.run(focused_context_tab2))
+                                focused_forecast_tab2 = loop.run_until_complete(st.session_state.fore.run(focused_context_tab2_rerun))
                                 st.markdown("##### Focused Forecast Results:")
                                 st.code(focused_forecast_tab2, language="markdown")
                                 render_forecast_chart(focused_forecast_tab2)
@@ -587,12 +601,11 @@ with tab2:
 
             if run_kg:
                 with st.spinner("Generating visualization..."):
-                    subgraph = kg_tab2.get_reasoning_subgraph(material, deterioration, environment)
+                    subgraph = kg_tab2_instance.get_reasoning_subgraph(material, deterioration, environment)
                     if subgraph:
                         render_kg_graph(subgraph)
                     else:
                         st.warning("No subgraph data found for current inputs.")
-
 
 # ------------------- TAB 3: Knowledge Graph Explorer -------------------
 with tab3:
@@ -618,7 +631,7 @@ with tab3:
         
         if counts:
             for row in counts:
-                icon = '📦' if row['label'] == 'Material' else '🔍' if row['label'] == 'NDTMethod' else '🌡️' if row['label'] == 'Environment' else '💢' if row['label'] == 'Deterioration' else '📡' if row['label'] == 'Sensor' else '📌'
+                icon = '📦' if row['label'] == 'Material' else '🔍' if row['label'] == 'NDTMethod' else '🌡️' if row['label'] == 'Environment' else '💢' if row['label'] == 'Deterioration' else '📡' if row['label'] == 'Sensor' else 'ρίσκο' if row['label'] == 'RiskType' else '📌'
                 st.markdown(f"""
                 <div style="display: flex; align-items: center; margin-bottom: 10px; background-color: #f8f9fa; padding: 10px; border-radius: 5px;">
                     <div style="font-size: 24px; margin-right: 15px;">{icon}</div>
