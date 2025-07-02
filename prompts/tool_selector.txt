@@ -17,7 +17,7 @@ Your task is to review provided information about material, defect/observation, 
 *   Primary Material, Defect/Observation, Environment.
 *   KG Recommended NDT Methods (initial list).
 *   KG Recommended Sensors (initial list).
-*   **Detailed Information from Knowledge Graph:** This section provides specific attributes (like descriptions, categories, costs) for the entities involved. **Use this detailed information extensively when forming your justifications.**
+*   **Detailed Information from Knowledge Graph:** This section provides specific attributes (like descriptions, categories, costs) for the entities involved, including potentially a detailed description of the defect/observation. **Use all this detailed information, especially any provided defect descriptions and NDT method capabilities, extensively when forming your justifications.**
 
 **Example Output Structure (Illustrative - follow instructions above for lists):**
 
