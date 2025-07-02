@@ -289,3 +289,71 @@ class KGInterface:
             return "No specific details found in KG for the provided entities."
 
         return "\n".join(context_parts)
+
+    # --- Methods for LLM Function Calling ---
+
+    def get_initial_recommendations_structured(self, material: str, defect: str, environment: str) -> Dict:
+        recommended_methods = self.recommend_ndt_methods(material, defect, environment) # Uses existing method
+        recommended_sensors = self.recommend_sensors(defect) # Uses existing method
+        return {
+            "recommended_methods": recommended_methods,
+            "recommended_sensors": recommended_sensors
+        }
+
+    def get_ndt_method_structured_details(self, method_name: str) -> Dict | None:
+        query = """
+        MATCH (n:NDTMethod {name: $method_name})
+        OPTIONAL MATCH (n)-[:hasPotentialRisk]->(r:RiskType)
+        RETURN n.name AS name,
+               n.description AS description,
+               n.costEstimate AS costEstimate,
+               n.methodCategory AS methodCategory,
+               n.detectionCapabilities AS detectionCapabilities,
+               n.applicableMaterialsNote AS applicableMaterialsNote,
+               n.methodLimitations AS methodLimitations,
+               collect({riskName: r.name, riskDescription: r.riskDescription, mitigationSuggestion: r.mitigationSuggestion}) AS potential_risks
+        LIMIT 1
+        """
+        results = self.cypher(query, {"method_name": method_name})
+        if not results or not results[0] or results[0].get("name") is None: # Check if method was found
+            return None
+
+        # Clean up potential_risks: if no risks, 'collect' might return a list with one dict of nulls
+        details = results[0]
+        if details.get("potential_risks") and \
+           len(details["potential_risks"]) == 1 and \
+           all(value is None for value in details["potential_risks"][0].values()):
+            details["potential_risks"] = []
+
+        return details
+
+
+    def get_material_structured_details(self, material_name: str) -> Dict | None:
+        query = """
+        MATCH (m:Material {name: $material_name})
+        RETURN m.name AS name, m.description AS description, m.commonApplications AS commonApplications
+        LIMIT 1
+        """
+        results = self.cypher(query, {"material_name": material_name})
+        return results[0] if results and results[0].get("name") is not None else None
+
+    def get_defect_structured_details(self, defect_name: str) -> Dict | None:
+        query_det = """
+        MATCH (d:Deterioration {name: $defect_name})
+        RETURN d.name AS name, d.detailedDescription AS detailedDescription
+        LIMIT 1
+        """
+        results_det = self.cypher(query_det, {"defect_name": defect_name})
+        if results_det and results_det[0].get("name") is not None:
+            return results_det[0]
+
+        query_pc = """
+        MATCH (pc:PhysicalChange {name: $defect_name})
+        RETURN pc.name AS name, pc.detailedDescription AS detailedDescription
+        LIMIT 1
+        """
+        results_pc = self.cypher(query_pc, {"defect_name": defect_name})
+        if results_pc and results_pc[0].get("name") is not None:
+            return results_pc[0]
+
+        return None
