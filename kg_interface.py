@@ -271,6 +271,20 @@ class KGInterface:
                     if m_details.get("methodLimitations"):
                         context_parts.append(f"  Method Limitations: {m_details['methodLimitations']}")
 
+                    # Fetch and append linked risks for the NDT method
+                    query_risks = """
+                    MATCH (n:NDTMethod {name: $method_name})-[:hasPotentialRisk]->(r:RiskType)
+                    RETURN r.name AS riskName, r.riskDescription AS riskDescription, r.mitigationSuggestion AS mitigationSuggestion
+                    """
+                    risks_details = self.cypher(query_risks, {"method_name": method_name}, log=False) # log=False to reduce noise for sub-queries
+                    if risks_details:
+                        context_parts.append(f"  Potential Risks:")
+                        for risk_detail in risks_details:
+                            risk_name = risk_detail.get('riskName', 'Unnamed Risk')
+                            desc = risk_detail.get('riskDescription', 'No description.')
+                            mitigation = risk_detail.get('mitigationSuggestion', 'None specified.')
+                            context_parts.append(f"    - {risk_name}: {desc} (Mitigation: {mitigation})")
+
         if not context_parts:
             return "No specific details found in KG for the provided entities."
 
