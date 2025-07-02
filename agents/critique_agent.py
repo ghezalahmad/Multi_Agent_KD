@@ -67,4 +67,3 @@ Begin Critique:
         print(response)
 
     # asyncio.run(main()) # Commented out for typical module usage
-```
