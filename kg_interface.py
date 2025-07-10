@@ -1,28 +1,58 @@
 # kg_interface.py (updated for active decision support)
 
 import os
-from neo4j import GraphDatabase
+from neo4j import GraphDatabase, exceptions as neo4j_exceptions
 from typing import List, Dict
 import uuid # Added for uuid.uuid4()
 from dotenv import load_dotenv
+import logging # For logging errors
 
 load_dotenv()
-import uuid # Added for uuid.uuid4()
+
+# Setup basic logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class KGInterface:
     def __init__(self):
         uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
         user = os.getenv("NEO4J_USER", "neo4j")
         password = os.getenv("NEO4J_PASSWORD", "eklil@2017")
-        self.driver = GraphDatabase.driver(uri, auth=(user, password))
+        try:
+            self.driver = GraphDatabase.driver(uri, auth=(user, password))
+            self.driver.verify_connectivity()
+            logger.info("Successfully connected to Neo4j.")
+        except neo4j_exceptions.AuthError as e:
+            logger.error(f"Neo4j authentication failed: {e}")
+            raise
+        except neo4j_exceptions.ServiceUnavailable as e:
+            logger.error(f"Neo4j is unavailable at {uri}: {e}")
+            raise
+        except Exception as e: # Catch any other driver creation errors
+            logger.error(f"Failed to create Neo4j driver: {e}")
+            raise
 
     def cypher(self, query: str, params: Dict = None, log: bool = True) -> List[Dict]:
         if log:
-            print(f"\n[Cypher Query]\n{query}\nWith Params: {params}")
-        with self.driver.session() as session:
-            result = session.run(query, params or {})
-            return [record.data() for record in result]
-
+            logger.info(f"\n[Cypher Query]\n{query}\nWith Params: {params}")
+        try:
+            with self.driver.session() as session:
+                result = session.run(query, params or {})
+                return [record.data() for record in result]
+        except neo4j_exceptions.CypherSyntaxError as e:
+            logger.error(f"Cypher syntax error in query: {query} | PARAMS: {params} | ERROR: {e}")
+            raise # Re-raise for the caller to handle or decide on fallback
+        except neo4j_exceptions.ConstraintError as e:
+            logger.error(f"Constraint violation: {query} | PARAMS: {params} | ERROR: {e}")
+            raise
+        except neo4j_exceptions.TransientError as e: # For temporary issues like leader switch, db busy
+            logger.warning(f"Neo4j transient error: {query} | PARAMS: {params} | ERROR: {e}. Consider retrying.")
+            # Depending on policy, could implement retries here or raise
+            raise
+        except Exception as e: # Catch any other Neo4j operational errors
+            logger.error(f"An unexpected Neo4j error occurred: {query} | PARAMS: {params} | ERROR: {e}")
+            raise
+        return [] # Should not be reached if exceptions are re-raised, but as a fallback
 
     def recommend_ndt_methods(self, material: str, defect: str, environment: str) -> List[str]:
         query = """
@@ -76,24 +106,35 @@ class KGInterface:
     # --- 1️⃣ Update KGInterface.py ---
     # Add this function to KGInterface class
 
-    def log_inspection_plan(self, plan: str, material: str, defect: str, environment: str) -> str: # Changed return type
+    def log_inspection_plan(self, plan_text: str, material: str, defect: str, environment: str) -> str:
         plan_id = str(uuid.uuid4())
         query = """
-        CREATE (i:InspectionPlan {
-            planID: $plan_id, // Added unique ID
-            text: $plan,
+        CREATE (ip:InspectionPlan {
+            planID: $plan_id,
+            text: $plan_text,
             material: $material,
             defect: $defect,
             environment: $environment,
             timestamp: datetime()
         })
+        RETURN ip.planID AS generatedPlanId
         """
-        self.cypher(query, {
-            "plan": plan,
+        # Assuming cypher returns a list of dicts, and CREATE...RETURN returns one record
+        result = self.cypher(query, {
+            "plan_id": plan_id,
+            "plan_text": plan_text,
             "material": material,
             "defect": defect,
             "environment": environment
         })
+        if result and result[0].get("generatedPlanId"):
+            logger.info(f"InspectionPlan logged with ID: {result[0]['generatedPlanId']}")
+            return result[0]["generatedPlanId"]
+        logger.error("Failed to log inspection plan or retrieve its ID.")
+        # Decide on error handling: raise exception or return None/empty string
+        # For now, returning an empty string or specific error indicator might be suitable
+        # if the calling code is prepared to handle it. Let's return plan_id as intended.
+        return plan_id # Fallback to initially generated UUID if RETURN fails to be parsed, though it shouldn't.
 
     def get_materials(self) -> List[str]:
         query = "MATCH (m:Material) RETURN DISTINCT m.name AS name ORDER BY name"
@@ -107,27 +148,41 @@ class KGInterface:
         query = "MATCH (e:Environment) RETURN DISTINCT e.name AS name ORDER BY name"
         return [r["name"] for r in self.cypher(query)]
 
-    def log_plan_feedback(self, plan_identifier: str, is_helpful: bool, feedback_text: str = None) -> None:
+    def log_plan_feedback(self, plan_id: str, is_helpful: bool, feedback_text: str = None) -> None:
         """
-        Logs user feedback about an inspection plan.
-        'plan_identifier' can be the forecast text or a hash of it for now.
+        Logs user feedback about an inspection plan using its unique planID.
         """
+        if not plan_id:
+            logger.error("Cannot log feedback without a valid plan_id.")
+            return
+
+        feedback_uuid = str(uuid.uuid4()) # Generate a UUID for the Feedback node
+
         query = """
-        MATCH (ip:InspectionPlan {planID: $plan_id}) // Match plan by its unique ID
+        MATCH (ip:InspectionPlan {planID: $plan_id_param})
         CREATE (f:Feedback {
+            uuid: $feedback_uuid_param, // Store the UUID on the node
             is_helpful: $is_helpful,
             comment: $feedback_text,
             timestamp: datetime()
-            // plan_ref_text: $plan_id // Optionally store plan_id on feedback too for direct ref
         })
         CREATE (f)-[:REFERS_TO_PLAN]->(ip)
+        RETURN f.uuid AS feedback_node_uuid, f.timestamp AS feedback_timestamp
         """
-        self.cypher(query, {
-            "plan_id": plan_id, # Changed parameter name
-            "is_helpful": is_helpful,
-            "feedback_text": feedback_text
-        })
-        print(f"Feedback logged for plan ID: {plan_id}. Helpful: {is_helpful}")
+        try:
+            result = self.cypher(query, {
+                "plan_id_param": plan_id,
+                "feedback_uuid_param": feedback_uuid,
+                "is_helpful": is_helpful,
+                "feedback_text": feedback_text
+            })
+            if result and result[0].get("feedback_timestamp"):
+                logger.info(f"Feedback logged for plan ID: {plan_id}. Helpful: {is_helpful}.")
+            else:
+                logger.warning(f"Feedback may not have been logged correctly for plan ID: {plan_id}. No confirmation timestamp returned.")
+        except Exception as e:
+            logger.error(f"Failed to log feedback for plan ID {plan_id}: {e}")
+            # Optionally re-raise or handle if critical
 
     def get_entities_details_for_rag(self, material_name: str = None, defect_name: str = None, method_names: list[str] = None) -> str:
         """

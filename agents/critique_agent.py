@@ -1,6 +1,6 @@
 from .base_agent import BaseAgent
 from pathlib import Path
-from kg_interface import KGInterface # Will be needed for RAG
+# from kg_interface import KGInterface # No longer directly needed if context is prepared externally
 
 class CritiqueAgent(BaseAgent):
     def __init__(self):
@@ -13,7 +13,7 @@ class CritiqueAgent(BaseAgent):
             system_prompt = prompt_path.read_text()
 
         super().__init__(system_prompt, temperature=0.1) # Critique should be fairly consistent
-        self.kg = KGInterface() # For RAG access
+        # self.kg = KGInterface() # Context including RAG details is expected to be passed to run()
 
     async def run(self, critique_context: str) -> str:
         """
