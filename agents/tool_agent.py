@@ -274,7 +274,10 @@ Output: {"material": "Concrete", "defect": "Cracking", "environment": "Humid"}""
         return {
             "summary_text": raw_agent_output,
             "recommended_methods": recommended_methods,
-            "recommended_sensors": recommended_sensors
+            "recommended_sensors": recommended_sensors,
+            "extracted_material": material,
+            "extracted_defect": defect,
+            "extracted_environment": environment
         }
 
     async def run_structured(self, material: str, defect: str, environment: str) -> dict:

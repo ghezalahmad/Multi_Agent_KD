@@ -1,6 +1,6 @@
 from .base_agent import BaseAgent
 from pathlib import Path
-from kg_interface import KGInterface # Will be needed for RAG data access via app/main.py
+# from kg_interface import KGInterface # No longer directly needed if context is prepared externally
 
 class RiskAssessmentAgent(BaseAgent):
     def __init__(self):
@@ -12,7 +12,7 @@ class RiskAssessmentAgent(BaseAgent):
             system_prompt = prompt_path.read_text()
 
         super().__init__(system_prompt, temperature=0.0) # Risks should be identified consistently
-        # self.kg = KGInterface() # KG access will be indirect via context prepared by app/main.py
+        # KG access will be indirect via context prepared by app/main.py, so no self.kg needed.
 
     async def run(self, risk_assessment_context: str) -> str:
         """

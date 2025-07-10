@@ -117,6 +117,16 @@ st.markdown("""
         background-color: #fef5e7;
         border-left: 4px solid #f39c12;
     }
+
+    .critique-agent-custom {
+        background-color: #f0f0f0; /* Light grey background */
+        border-left: 4px solid #777; /* Dark grey border */
+    }
+
+    .risk-agent-custom {
+        background-color: #fff0f0; /* Light red background */
+        border-left: 4px solid #c00; /* Dark red border */
+    }
     
     /* Dashboard cards */
     .dashboard-card {
@@ -153,6 +163,82 @@ with col1:
 with col2:
     st.markdown("# Autonomous NDT Planning")
     st.markdown("#### Intelligent Non-Destructive Testing with LLM + Knowledge Graph")
+
+# Helper function to display agent outputs consistently
+def display_agent_output(title: str, html_content: str, css_class: str, icon: str = "🤖"):
+    st.markdown(f"""
+    <div class="agent-section {css_class}">
+        <h4>{icon} {title}</h4>
+        <p>{html_content}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Helper function to display agent outputs consistently
+def display_agent_output(title: str, html_content: str, css_class: str, icon: str = "🤖"):
+    st.markdown(f"""
+    <div class="agent-section {css_class}">
+        <h4>{icon} {title}</h4>
+        <p>{html_content}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+def render_focused_forecast_ui(loop, recommended_methods_list: list, forecaster_agent, base_context_parts: dict, key_suffix: str):
+    st.markdown("---")
+    st.markdown("#### Focused Deterioration Forecast")
+
+    if recommended_methods_list:
+        selected_methods = st.multiselect(
+            "Select NDT Method(s) for Focused Forecast:",
+            options=recommended_methods_list,
+            key=f"focused_select_{key_suffix}"
+        )
+        if st.button("Re-run Forecast for Selected", key=f"rerun_forecast_{key_suffix}"):
+            if selected_methods:
+                # Construct context string based on what's in base_context_parts
+                context_lines = [f"Focusing on NDT methods: {', '.join(selected_methods)}."]
+                if "user_input" in base_context_parts: # Tab 1 like context
+                    context_lines.append(f"Original user query: {base_context_parts['user_input']}")
+                    context_lines.append(f"Initial plan context: {base_context_parts['plan_agent_output']}")
+                    context_lines.append(f"Tool selection context: {base_context_parts['tools_summary']}")
+                elif "material" in base_context_parts: # Tab 2 like context
+                    context_lines.append(f"Original context: Material: {base_context_parts['material']}, Defect: {base_context_parts['defect']}, Environment: {base_context_parts['environment']}")
+
+                focused_context_rerun = "\n".join(context_lines)
+
+                with st.spinner("ForecasterAgent running focused forecast..."):
+                    focused_forecast_output = loop.run_until_complete(forecaster_agent.run(focused_context_rerun))
+                    st.markdown("##### Focused Forecast Results:")
+                    st.code(focused_forecast_output, language="markdown")
+                    if "material" in base_context_parts: # Only render charts if it's from structured planner (Tab2-like) for now
+                        render_forecast_chart(focused_forecast_output)
+                        render_gantt_chart(focused_forecast_output)
+            else:
+                st.warning("Please select at least one NDT method for focused forecast.")
+    else:
+        st.info("No specific NDT methods available to allow focused forecast.")
+
+def render_feedback_buttons(kg_interface_instance: KGInterface, session_state_plan_id_key: str, key_suffix: str):
+    st.markdown("---")
+    st.markdown("##### Was this plan helpful?")
+    fb_col1, fb_col2 = st.columns(2)
+    current_plan_id = st.session_state.get(session_state_plan_id_key)
+
+    with fb_col1:
+        if st.button("👍 Yes", key=f"helpful_{key_suffix}", use_container_width=True):
+            if current_plan_id:
+                kg_interface_instance.log_plan_feedback(plan_id=current_plan_id, is_helpful=True)
+                st.toast("🙏 Thank you for your feedback!", icon="👍")
+            else:
+                st.toast("Error: Plan ID not found for feedback.", icon="⚠️")
+    with fb_col2:
+        if st.button("👎 No", key=f"unhelpful_{key_suffix}", use_container_width=True):
+            if current_plan_id:
+                # Potentially add a text input here for detailed feedback if "No"
+                # feedback_text = st.text_input("Please provide details (optional):", key=f"feedback_text_{key_suffix}")
+                kg_interface_instance.log_plan_feedback(plan_id=current_plan_id, is_helpful=False) #, feedback_text=feedback_text if feedback_text else None)
+                st.toast("🙏 Thank you! Your feedback helps us improve.", icon="💡")
+            else:
+                st.toast("Error: Plan ID not found for feedback.", icon="⚠️")
 
 def seed_knowledge_graph():
     kg = KGInterface()
@@ -309,24 +395,14 @@ with tab1:
         with st.spinner("PlannerAgent thinking..."):
             plan_agent_output_tab1 = loop.run_until_complete(st.session_state.plan.run(user_input))
             plan_agent_output_tab1_html = plan_agent_output_tab1.replace('\n', '<br>')
-            st.markdown(f"""
-            <div class="agent-section planner-agent">
-                <h4>🧠 PlannerAgent</h4>
-                <p>{plan_agent_output_tab1_html}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            display_agent_output("PlannerAgent", plan_agent_output_tab1_html, "planner-agent", icon="🧠")
 
         with st.spinner("ToolSelectorAgent working..."):
             tool_agent_output_tab1 = loop.run_until_complete(st.session_state.tools.run(plan_agent_output_tab1))
             tools_summary_tab1 = tool_agent_output_tab1.get("summary_text", "")
             recommended_methods_tab1_list = tool_agent_output_tab1.get("recommended_methods", [])
             tools_summary_tab1_html = tools_summary_tab1.replace('\n', '<br>')
-            st.markdown(f"""
-            <div class="agent-section tool-agent">
-                <h4>🔧 ToolSelectorAgent</h4>
-                <p>{tools_summary_tab1_html}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            display_agent_output("ToolSelectorAgent", tools_summary_tab1_html, "tool-agent", icon="🔧")
 
         with st.spinner("CritiqueAgent reviewing recommendations..."):
             rag_details_for_critique_tab1 = ""
@@ -343,12 +419,9 @@ with tab1:
             )
             critique_output_tab1 = loop.run_until_complete(st.session_state.critique.run(critique_context_tab1))
             critique_output_tab1_html = critique_output_tab1.replace('\n', '<br>')
-            st.markdown(f"""
-            <div class="agent-section" style="background-color: #f0f0f0; border-left: 4px solid #777;">
-                <h4>🕵️‍♂️ Critique & Considerations</h4>
-                <p>{critique_output_tab1_html}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            # Using a generic class name, specific style is inline
+            display_agent_output("Critique & Considerations", critique_output_tab1_html, "critique-agent-custom", icon="🕵️‍♂️")
+
 
         with st.spinner("RiskAssessmentAgent analyzing potential risks..."):
             rag_details_for_risk_tab1 = rag_details_for_critique_tab1 # Reuse RAG details which now include risks
@@ -359,12 +432,8 @@ with tab1:
             )
             risk_output_tab1 = loop.run_until_complete(st.session_state.risk.run(risk_context_tab1))
             risk_output_tab1_html = risk_output_tab1.replace('\n', '<br>')
-            st.markdown(f"""
-            <div class="agent-section" style="background-color: #fff0f0; border-left: 4px solid #c00;">
-                <h4>⚠️ Potential Risk Analysis</h4>
-                <p>{risk_output_tab1_html}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            # Using a generic class name, specific style is inline
+            display_agent_output("Potential Risk Analysis", risk_output_tab1_html, "risk-agent-custom", icon="⚠️")
 
         forecast_text_tab1 = ""
         with st.spinner("ForecasterAgent running..."):
@@ -373,12 +442,7 @@ with tab1:
             forecaster_context_tab1 = f"{tools_summary_tab1}\nCritique: {critique_output_tab1}\nRisks: {risk_output_tab1}"
             forecast_text_tab1 = loop.run_until_complete(st.session_state.fore.run(forecaster_context_tab1))
             forecast_text_tab1_html = forecast_text_tab1.replace('\n', '<br>')
-            st.markdown(f"""
-            <div class="agent-section forecaster-agent">
-                <h4>📉 ForecasterAgent</h4>
-                <p>{forecast_text_tab1_html}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            display_agent_output("ForecasterAgent", forecast_text_tab1_html, "forecaster-agent", icon="📉")
 
         st.markdown("""
         <div class="dashboard-card">
@@ -387,44 +451,40 @@ with tab1:
         """, unsafe_allow_html=True)
         st.code(forecast_text_tab1, language="markdown")
 
-        st.markdown("---")
-        st.markdown("#### Focused Deterioration Forecast")
+        # Use the refactored UI function for focused forecast
+        tab1_focused_forecast_context_parts = {
+            "user_input": user_input,
+            "plan_agent_output": plan_agent_output_tab1, # Ensure this is available in scope
+            "tools_summary": tools_summary_tab1 # Ensure this is available
+        }
+        render_focused_forecast_ui(loop, recommended_methods_tab1_list, st.session_state.fore, tab1_focused_forecast_context_parts, "tab1")
 
-        if recommended_methods_tab1_list:
-            selected_methods_tab1 = st.multiselect(
-                "Select NDT Method(s) for Focused Forecast:",
-                options=recommended_methods_tab1_list,
-                key="focused_select_tab1"
-            )
-            if st.button("Re-run Forecast for Selected", key="rerun_forecast_tab1"):
-                if selected_methods_tab1:
-                    focused_context_tab1_rerun = (
-                        f"Focusing on NDT methods: {', '.join(selected_methods_tab1)}.\n"
-                        f"Original user query: {user_input}\n"
-                        f"Initial plan context: {plan_agent_output_tab1}\n"
-                        f"Tool selection context: {tools_summary_tab1}" # Original tool summary
-                    )
-                    with st.spinner("ForecasterAgent running focused forecast..."):
-                        focused_forecast_tab1 = loop.run_until_complete(st.session_state.fore.run(focused_context_tab1_rerun))
-                        st.markdown("##### Focused Forecast Results:")
-                        st.code(focused_forecast_tab1, language="markdown")
-                else:
-                    st.warning("Please select at least one NDT method for focused forecast.")
-        else:
-            st.info("No specific NDT methods parsed from ToolSelectorAgent to allow focused forecast.")
+        if 'current_plan_id_tab1' not in st.session_state: # Initialize for Tab 1
+            st.session_state.current_plan_id_tab1 = None
 
         if forecast_text_tab1:
-            st.markdown("---")
-            st.markdown("##### Was this plan helpful?")
-            fb_col1_t1, fb_col2_t1 = st.columns(2)
-            with fb_col1_t1:
-                if st.button("👍 Yes", key="helpful_tab1", use_container_width=True):
-                    KGInterface().log_plan_feedback(plan_identifier=forecast_text_tab1, is_helpful=True) # Still uses forecast as ID for Tab 1
-                    st.toast("🙏 Thank you for your feedback!", icon="👍")
-            with fb_col2_t1:
-                if st.button("👎 No", key="unhelpful_tab1", use_container_width=True):
-                    KGInterface().log_plan_feedback(plan_identifier=forecast_text_tab1, is_helpful=False)
-                    st.toast("🙏 Thank you! Your feedback helps us improve.", icon="💡")
+            # Log the inspection plan for Tab 1
+            # Extract material, defect, environment from tool_agent_output_tab1
+            extracted_material_tab1 = tool_agent_output_tab1.get("extracted_material", "NL_Derived_Unknown")
+            extracted_defect_tab1 = tool_agent_output_tab1.get("extracted_defect", "NL_Derived_Unknown")
+            extracted_environment_tab1 = tool_agent_output_tab1.get("extracted_environment", "NL_Derived_Unknown")
+
+            # Ensure values are not "unknown" which might be too generic for KG properties
+            if extracted_material_tab1 == "unknown": extracted_material_tab1 = "NL_Derived_Unknown"
+            if extracted_defect_tab1 == "unknown": extracted_defect_tab1 = "NL_Derived_Unknown"
+            if extracted_environment_tab1 == "unknown": extracted_environment_tab1 = "NL_Derived_Unknown"
+
+            st.session_state.current_plan_id_tab1 = kg_instance_tab1.log_inspection_plan(
+                plan_text=forecast_text_tab1, # Using forecast as the plan text
+                material=extracted_material_tab1,
+                defect=extracted_defect_tab1,
+                environment=extracted_environment_tab1
+            )
+            if st.session_state.current_plan_id_tab1:
+                st.caption(f"Plan logged with ID: {st.session_state.current_plan_id_tab1}")
+
+            # Use the refactored UI function for feedback buttons
+            render_feedback_buttons(kg_instance_tab1, "current_plan_id_tab1", "tab1")
 
 # ------------------- TAB 2: KG-Driven Structured Planner -------------------
 with tab2:
@@ -498,12 +558,7 @@ with tab2:
                 )
                 critique_output_tab2 = loop.run_until_complete(st.session_state.critique.run(critique_context_tab2))
                 critique_output_tab2_html = critique_output_tab2.replace('\n', '<br>')
-                st.markdown(f"""
-                <div class="agent-section" style="background-color: #f0f0f0; border-left: 4px solid #777;">
-                    <h4>🕵️‍♂️ Critique & Considerations</h4>
-                    <p>{critique_output_tab2_html}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                display_agent_output("Critique & Considerations", critique_output_tab2_html, "critique-agent-custom", icon="🕵️‍♂️")
 
             with st.spinner("RiskAssessmentAgent analyzing potential risks..."):
                 # RAG details already include risk information due to previous step
@@ -515,12 +570,7 @@ with tab2:
                 )
                 risk_output_tab2 = loop.run_until_complete(st.session_state.risk.run(risk_context_tab2))
                 risk_output_tab2_html = risk_output_tab2.replace('\n', '<br>')
-                st.markdown(f"""
-                <div class="agent-section" style="background-color: #fff0f0; border-left: 4px solid #c00;">
-                    <h4>⚠️ Potential Risk Analysis</h4>
-                    <p>{risk_output_tab2_html}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                display_agent_output("Potential Risk Analysis", risk_output_tab2_html, "risk-agent-custom", icon="⚠️")
 
             forecast_text_tab2 = ""
             with st.spinner("ForecasterAgent modeling damage evolution..."):
@@ -548,50 +598,18 @@ with tab2:
                 render_forecast_chart(forecast_text_tab2)
                 render_gantt_chart(forecast_text_tab2)
 
-                st.markdown("---")
-                st.markdown("#### Focused Deterioration Forecast")
-
-                if recommended_methods_tab2_list:
-                    selected_methods_tab2 = st.multiselect(
-                        "Select NDT Method(s) for Focused Forecast:",
-                        options=recommended_methods_tab2_list,
-                        key="focused_select_tab2"
-                    )
-                    if st.button("Re-run Forecast for Selected", key="rerun_forecast_tab2"):
-                        if selected_methods_tab2:
-                            focused_context_tab2_rerun = (
-                                f"Focusing on NDT methods: {', '.join(selected_methods_tab2)}.\n"
-                                f"Original context: Material: {material}, Defect: {deterioration}, Environment: {environment}"
-                            )
-                            with st.spinner("ForecasterAgent running focused forecast..."):
-                                focused_forecast_tab2 = loop.run_until_complete(st.session_state.fore.run(focused_context_tab2_rerun))
-                                st.markdown("##### Focused Forecast Results:")
-                                st.code(focused_forecast_tab2, language="markdown")
-                                render_forecast_chart(focused_forecast_tab2)
-                                render_gantt_chart(focused_forecast_tab2)
-                        else:
-                            st.warning("Please select at least one NDT method for focused forecast.")
-                else:
-                    st.info("No specific NDT methods parsed from ToolSelectorAgent to allow focused forecast.")
+                # Use the refactored UI function for focused forecast
+                tab2_focused_forecast_context_parts = {
+                    "material": material, # Ensure this is available in scope
+                    "defect": deterioration, # Ensure this is available
+                    "environment": environment # Ensure this is available
+                }
+                render_focused_forecast_ui(loop, recommended_methods_tab2_list, st.session_state.fore, tab2_focused_forecast_context_parts, "tab2")
 
                 if forecast_text_tab2:
-                    st.markdown("---")
-                    st.markdown("##### Was this plan helpful?")
-                    fb_col1_t2, fb_col2_t2 = st.columns(2)
-                    with fb_col1_t2:
-                        if st.button("👍 Yes", key="helpful_tab2", use_container_width=True):
-                            if st.session_state.current_plan_id_tab2:
-                                KGInterface().log_plan_feedback(plan_id=st.session_state.current_plan_id_tab2, is_helpful=True)
-                                st.toast("🙏 Thank you for your feedback!", icon="👍")
-                            else:
-                                st.toast("Error: Plan ID not found for feedback.", icon="⚠️")
-                    with fb_col2_t2:
-                        if st.button("👎 No", key="unhelpful_tab2", use_container_width=True):
-                            if st.session_state.current_plan_id_tab2:
-                                KGInterface().log_plan_feedback(plan_id=st.session_state.current_plan_id_tab2, is_helpful=False)
-                                st.toast("🙏 Thank you! Your feedback helps us improve.", icon="💡")
-                            else:
-                                st.toast("Error: Plan ID not found for feedback.", icon="⚠️")
+                    # Use the refactored UI function for feedback buttons
+                    render_feedback_buttons(kg_tab2_instance, "current_plan_id_tab2", "tab2")
+
         with col2_results_kg:
             st.markdown("""
             <div class="dashboard-card">
@@ -776,19 +794,54 @@ from utils.kg_exporter import export_kg_to_owl
 from utils.shacl_validator import validate_owl_with_shacl
 
 with st.sidebar.expander("🔁 KG Export / Validation"):
-    if st.button("⬇️ Export to OWL"):
-        export_kg_to_owl([
-            ("Concrete", "hasDefect", "Cracking"),
-            ("Cracking", "detectedBy", "Ultrasonic Testing")
-        ])
+    if st.button("⬇️ Export KG to Turtle/OWL"):
+        try:
+            kg_interface_for_export = KGInterface() # Create an instance for the export
+            output_filename = "ndt_knowledge_graph.ttl"
+            export_kg_to_owl(kg_interface_for_export, output_file=output_filename)
+            st.success(f"Knowledge Graph exported to `{output_filename}` successfully!")
+            with open(output_filename, "rb") as fp:
+                st.download_button(
+                    label="Download Exported KG",
+                    data=fp,
+                    file_name=output_filename,
+                    mime="text/turtle"
+                )
+        except Exception as e:
+            st.error(f"Error during KG export: {e}")
+            # Consider logging the full traceback here for debugging
+            # import traceback
+            # st.text_area("Error details:", traceback.format_exc(), height=200)
+
 
     if st.button("✅ Run SHACL Validation"):
-        conforms, report = validate_owl_with_shacl("ndt_kg.owl", "shacl/shacl_constraints.ttl")
-        if conforms:
-            st.success("KG conforms to SHACL constraints!")
+        conforms = False # Initialize conforms
+        report = ""      # Initialize report
+        # It's better to let the user upload the file they want to validate,
+        # or validate the most recently exported file if that's the workflow.
+        # For now, assuming validation of the default exported file.
+        exported_file_to_validate = "ndt_knowledge_graph.ttl"
+        shacl_constraints_file = "shacl/shacl_constraints.ttl"
+
+        if not Path(exported_file_to_validate).exists():
+            st.warning(f"File `{exported_file_to_validate}` not found. Please export the KG first.")
+        elif not Path(shacl_constraints_file).exists():
+            st.error(f"SHACL constraints file `{shacl_constraints_file}` not found.")
         else:
-            st.error("❌ KG does NOT conform!")
-            st.text(report)
+            try:
+                conforms, report = validate_owl_with_shacl(exported_file_to_validate, shacl_constraints_file)
+                if conforms:
+                    st.success(f"`{exported_file_to_validate}` conforms to SHACL constraints!")
+                else:
+                    st.error(f"❌ `{exported_file_to_validate}` does NOT conform to SHACL constraints!")
+                    st.text_area("Validation Report:", report, height=300)
+            except Exception as e:
+                st.error(f"Error during SHACL validation: {e}")
+                # import traceback
+                # st.text_area("Error details:", traceback.format_exc(), height=200)
+        # The success/error messages are now inside the try/except block based on validation result.
+        # The final "if conforms:" block outside is redundant if messages are handled inside.
+        # I will remove the final if/else for conforms/report as it's handled above.
 
 # Footer
 st.markdown("""
