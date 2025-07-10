@@ -6,6 +6,7 @@ from langchain.tools import Tool
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain import hub
 from langchain.prompts import PromptTemplate # For fallback prompt
+import json
 
 # Basic ReAct prompt template string (fallback if hub.pull fails)
 # This is a simplified version of hwchase17/react. For best results, the hub version is preferred.
@@ -95,7 +96,7 @@ class ToolSelectorAgent(BaseAgent):
 
     def _get_initial_recommendations_wrapper(self, input_str: str) -> dict:
         try:
-            parts = [s.strip() for s in input_str.split(",")]
+            parts = [s.strip().strip("'\"") for s in input_str.split(",")]
             if len(parts) == 3:
                 material, defect, environment = parts
                 return self.kg.get_initial_recommendations_structured(material, defect, environment)
@@ -151,8 +152,44 @@ Output: {"material": "Concrete", "defect": "Cracking", "environment": "Humid"}""
             material = entities.get("material", "unknown")
             defect = entities.get("defect", "unknown")
             environment = entities.get("environment", "unknown")
+            # Handle cases where defect/material/environment are lists
+            if isinstance(material, list):
+                material = ", ".join(str(x) for x in material)
+            if isinstance(defect, list):
+                defect = ", ".join(str(x) for x in defect)
+            if isinstance(environment, list):
+                environment = ", ".join(str(x) for x in environment)
+        # ...existing code...
         except json.JSONDecodeError:
             print(f"ToolSelectorAgent (run): Failed to parse JSON from extraction: {extracted_json_str}")
+            # Fallback: Try to extract keywords from the plan_text directly
+            import re
+            material_match = re.search(r"material\s*[:=]\s*([A-Za-z0-9_ -]+)", plan_text, re.IGNORECASE)
+            defect_match = re.search(r"(defect|observation)\s*[:=]\s*([A-Za-z0-9_ -]+)", plan_text, re.IGNORECASE)
+            environment_match = re.search(r"environment\s*[:=]\s*([A-Za-z0-9_ -]+)", plan_text, re.IGNORECASE)
+            if material_match:
+                material = material_match.group(1).strip()
+            else:
+                # Try to find common material keywords
+                for mat in ["concrete", "steel", "aluminum", "wood"]:
+                    if mat in plan_text.lower():
+                        material = mat.capitalize()
+                        break
+            if defect_match:
+                defect = defect_match.group(2).strip()
+            else:
+                for defect_kw in ["crack", "corrosion", "delamination", "void"]:
+                    if defect_kw in plan_text.lower():
+                        defect = defect_kw.capitalize()
+                        break
+            if environment_match:
+                environment = environment_match.group(1).strip()
+            else:
+                for env in ["humid", "dry", "marine", "underground"]:
+                    if env in plan_text.lower():
+                        environment = env.capitalize()
+                        break
+        # ...existing code...
 
         if material == "unknown" or defect == "unknown" or environment == "unknown":
             print(f"ToolSelectorAgent (run): Entity extraction resulted in unknowns: M={material}, D={defect}, E={environment}")
