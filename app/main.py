@@ -393,7 +393,7 @@ with tab1:
         st.markdown("#### Inspection Planning Process")
         
         with st.spinner("PlannerAgent thinking..."):
-            plan_agent_output_tab1 = loop.run_until_complete(st.session_state.plan.run(user_input))
+            plan_agent_output_tab1 = loop.run_until_complete(st.session_state.plan(user_input))
             plan_agent_output_tab1_html = plan_agent_output_tab1.replace('\n', '<br>')
             display_agent_output("PlannerAgent", plan_agent_output_tab1_html, "planner-agent", icon="🧠")
 

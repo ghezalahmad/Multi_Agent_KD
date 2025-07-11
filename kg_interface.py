@@ -6,6 +6,7 @@ from typing import List, Dict
 import uuid # Added for uuid.uuid4()
 from dotenv import load_dotenv
 import logging # For logging errors
+from typing import Optional, Dict
 
 load_dotenv()
 
@@ -287,7 +288,9 @@ class KGInterface:
             "recommended_sensors": recommended_sensors
         }
 
-    def get_ndt_method_structured_details(self, method_name: str) -> Dict | None:
+    def get_ndt_method_structured_details(self, method_name: str) -> Optional[Dict]:
+
+
         query = """
         MATCH (n:NDTMethod {name: $method_name})
         OPTIONAL MATCH (n)-[:hasPotentialRisk]->(r:RiskType)
@@ -315,7 +318,8 @@ class KGInterface:
         return details
 
 
-    def get_material_structured_details(self, material_name: str) -> Dict | None:
+    def get_material_structured_details(self, material_name: str) -> Optional[Dict]:
+
         query = """
         MATCH (m:Material {name: $material_name})
         RETURN m.name AS name, m.description AS description, m.commonApplications AS commonApplications
@@ -324,7 +328,7 @@ class KGInterface:
         results = self.cypher(query, {"material_name": material_name})
         return results[0] if results and results[0].get("name") is not None else None
 
-    def get_defect_structured_details(self, defect_name: str) -> Dict | None:
+    def get_defect_structured_details(self, defect_name: str) -> Optional[Dict]:
         query_det = """
         MATCH (d:Deterioration {name: $defect_name})
         RETURN d.name AS name, d.detailedDescription AS detailedDescription
