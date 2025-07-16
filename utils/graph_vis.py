@@ -2,41 +2,32 @@
 from pyvis.network import Network
 from pathlib import Path
 import streamlit.components.v1 as components
+import tempfile
 
 def render_kg_graph(subgraph_data):
-    from pyvis.network import Network
-    from pathlib import Path
-    import streamlit.components.v1 as components
+    net = Network(height="500px", width="100%", bgcolor="#222222", font_color="white", directed=True)
+    net.barnes_hut()
 
-    net = Network(height="450px", width="100%", bgcolor="#222222", font_color="white")
+    type_colors = {
+        "Material": "#00aaff",
+        "Defect": "#ffaa00",
+        "NDTMethod": "#66ff66",
+        "Sensor": "#ff5555",
+        "Environment": "#dd44ff"
+    }
 
-    for row in subgraph_data:
-        m, d, n, e, s = row['material'], row['defect'], row['method'], row['env'], row['sensor']
+    for node in subgraph_data["nodes"]:
+        net.add_node(
+            node["id"],
+            label=node["label"],
+            title=node["type"],
+            color=type_colors.get(node["type"], "#999999"),
+            shape="dot"
+        )
 
-        if m: net.add_node(m, label=m, color="#00aaff")
-        if d: net.add_node(d, label=d, color="#ffaa00")
-        if n: net.add_node(n, label=n, color="#66ff66")
-        if e: net.add_node(e, label=e, color="#dd44ff")
-        if s: net.add_node(s, label=s, color="#ff5555")
+    for edge in subgraph_data["edges"]:
+        net.add_edge(edge["from"], edge["to"], label=edge.get("label", ""))
 
-        if m and d: net.add_edge(m, d)
-        if d and n: net.add_edge(d, n)
-        if n and e: net.add_edge(n, e)
-        if s and n: net.add_edge(s, n)
-
-    net.set_options(""" 
-        {
-        "nodes": {
-            "shape": "dot",
-            "size": 16,
-            "font": { "size": 14 }
-        },
-        "edges": {
-            "arrows": "to"
-        }
-        }
-        """)
-
-    net.save_graph("graph.html")
-    components.html(Path("graph.html").read_text(), height=480)
-
+    tmp_path = Path(tempfile.gettempdir()) / "graph.html"
+    net.save_graph(str(tmp_path))
+    components.html(tmp_path.read_text(), height=500)

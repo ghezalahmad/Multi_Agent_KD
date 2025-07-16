@@ -348,3 +348,55 @@ class KGInterface:
             return results_pc[0]
 
         return None
+    # Inside class KGInterface in kg_interface.py
+    def get_recommendation_subgraph(self, material, defect, environment):
+        with self.driver.session() as session:
+            return session.read_transaction(
+                self._get_recommendation_subgraph_tx, material, defect, environment
+            )
+
+    @staticmethod
+    def _get_recommendation_subgraph_tx(tx, material, defect, environment):
+        query = """
+        MATCH (m:Material {name: $material})-[:AFFECTS]->(d:Defect {name: $defect})
+        OPTIONAL MATCH (d)-[:INSPECTED_BY]->(n:NDTMethod)-[:REQUIRES]->(s:Sensor)
+        OPTIONAL MATCH (n)-[:USED_IN]->(e:Environment {name: $environment})
+        RETURN DISTINCT m.name AS material, d.name AS defect, n.name AS method,
+                        s.name AS sensor, e.name AS environment,
+                        labels(m)[0] AS m_label, labels(d)[0] AS d_label,
+                        labels(n)[0] AS n_label, labels(s)[0] AS s_label,
+                        labels(e)[0] AS e_label
+        """
+        result = tx.run(query, material=material, defect=defect, environment=environment)
+        records = list(result)  # ✅ fetch all before consume
+
+        nodes = []
+        edges = []
+        seen = set()
+
+        for r in records:
+            def add_node(name, label):
+                if name and name not in seen:
+                    nodes.append({"id": name, "label": name, "type": label})
+                    seen.add(name)
+
+            add_node(r["material"], r["m_label"])
+            add_node(r["defect"], r["d_label"])
+            add_node(r["method"], r["n_label"])
+            add_node(r["sensor"], r["s_label"])
+            add_node(r["environment"], r["e_label"])
+
+            # Define edges (avoid None values)
+            if r["material"] and r["defect"]:
+                edges.append({"from": r["material"], "to": r["defect"], "label": "AFFECTS"})
+            if r["defect"] and r["method"]:
+                edges.append({"from": r["defect"], "to": r["method"], "label": "INSPECTED_BY"})
+            if r["method"] and r["sensor"]:
+                edges.append({"from": r["method"], "to": r["sensor"], "label": "REQUIRES"})
+            if r["method"] and r["environment"]:
+                edges.append({"from": r["method"], "to": r["environment"], "label": "USED_IN"})
+
+        return {"nodes": nodes, "edges": edges}
+
+
+

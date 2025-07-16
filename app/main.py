@@ -1,5 +1,11 @@
+# app/main.py (very top)
 import sys
 from pathlib import Path
+
+# Add project root to Python path
+ROOT_DIR = Path(__file__).resolve().parent.parent
+sys.path.append(str(ROOT_DIR))
+
 import time
 
 project_root = Path(__file__).resolve().parents[1]
@@ -15,6 +21,17 @@ from agents.critique_agent import CritiqueAgent
 from agents.risk_assessment_agent import RiskAssessmentAgent # Added
 from kg_interface import KGInterface
 from utils.gantt_chart import render_gantt_chart
+from utils.session_utils import generate_plan_id, log_agent_response
+
+
+
+
+import asyncio
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+
+
+
 
 
 # Set up page configuration with a custom theme
@@ -370,6 +387,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 ])
 
 # ------------------- TAB 1: LLM Planner -------------------
+# ------------------- TAB 1: LLM Planner -------------------
 with tab1:
     st.markdown("""
     <div class="dashboard-card">
@@ -377,114 +395,139 @@ with tab1:
         <p>Describe the observed defect in natural language and let our LLM-powered system plan your inspection.</p>
     </div>
     """, unsafe_allow_html=True)
-    
-    user_input = st.text_input("Describe the observed defect:", 
+
+    user_input = st.text_input("Describe the observed defect:",
                               placeholder="e.g., Cracks on concrete wall in humid environment",
                               key="nl_input")
 
     col1_run_nl, col2_run_nl = st.columns([1, 3])
     with col1_run_nl:
         run_nl = st.button("🔍 Plan Inspection", key="run_nl", use_container_width=True)
-    
+
     if user_input and run_nl:
-        loop = st.session_state.loop
-        kg_instance_tab1 = KGInterface() # Instance for KG calls in this tab
+        from kg_interface import KGInterface
 
-        st.markdown("#### Inspection Planning Process")
-        
+        if "kg_instance_tab1" not in st.session_state:
+            st.session_state.kg_instance_tab1 = KGInterface()
+
+        kg_instance_tab1 = st.session_state.get("kg_instance_tab1", KGInterface())  # Fallback instance
+
+
+        plan_id = generate_plan_id()
+        st.session_state.plan_id_tab1 = plan_id
+
+        from agents.planner_agent import PlannerAgent
+        planner_agent = PlannerAgent()
+
         with st.spinner("PlannerAgent thinking..."):
-            plan_agent_output_tab1 = loop.run_until_complete(st.session_state.plan(user_input))
-            plan_agent_output_tab1_html = plan_agent_output_tab1.replace('\n', '<br>')
-            display_agent_output("PlannerAgent", plan_agent_output_tab1_html, "planner-agent", icon="🧠")
+            plan_output = loop.run_until_complete(planner_agent(user_input, plan_id))  # 🔁 use run_until_complete
 
+        st.session_state.plan_text = plan_output
+        display_agent_output("PlannerAgent", plan_output, "planner-agent", icon="🧭")
+        log_agent_response(plan_id, "PlannerAgent", plan_output, user_input=user_input)
+
+
+        # ToolSelectorAgent
+        from agents.tool_agent import ToolSelectorAgent
         with st.spinner("ToolSelectorAgent working..."):
-            tool_agent_output_tab1 = loop.run_until_complete(st.session_state.tools.run(plan_agent_output_tab1))
-            tools_summary_tab1 = tool_agent_output_tab1.get("summary_text", "")
-            recommended_methods_tab1_list = tool_agent_output_tab1.get("recommended_methods", [])
-            tools_summary_tab1_html = tools_summary_tab1.replace('\n', '<br>')
-            display_agent_output("ToolSelectorAgent", tools_summary_tab1_html, "tool-agent", icon="🔧")
+            tool_agent = ToolSelectorAgent()
+            tool_result = loop.run_until_complete(tool_agent.run(plan_output))
+            st.session_state.tool_result = tool_result
+                # Display and log tool output
+                # --- Display and log ToolSelectorAgent results ---
+        # Display summary of recommended methods
+        display_agent_output("ToolSelectorAgent", tool_result.get("summary_text", ""), "tool-agent", icon="🔧")
+        log_agent_response(plan_id, "ToolSelectorAgent", tool_result.get("summary_text", ""))
 
+        # Optional: Visualize Knowledge Graph reasoning used by ToolSelector
+        st.markdown("""
+        <div class="dashboard-card">
+            <h4>🔗 Knowledge Graph Reasoning Subgraph</h4>
+            <p>This visual shows how the ToolSelectorAgent connected material, defect, environment, and sensors using the NDT knowledge graph.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Extract components and render subgraph
+        extracted_material = tool_result.get("extracted_material", "NL_Derived_Unknown")
+        extracted_defect = tool_result.get("extracted_defect", "NL_Derived_Unknown")
+        extracted_environment = tool_result.get("extracted_environment", "NL_Derived_Unknown")
+
+        try:
+            subgraph = kg_instance_tab1.get_recommendation_subgraph(
+                material=extracted_material,
+                defect=extracted_defect,
+                environment=extracted_environment
+            )
+            
+            render_kg_graph(subgraph)
+        except Exception as e:
+            st.warning(f"❗ Could not render KG subgraph: {e}")
+
+
+
+
+        # CritiqueAgent
+        from agents.critique_agent import CritiqueAgent
+        recommended_methods = tool_result.get("recommended_methods", [])
+        rag_details = ""
+        if recommended_methods:
+            rag_details = kg_instance_tab1.get_entities_details_for_rag(method_names=recommended_methods)
+        critique_input = (
+            f"**Scenario Context (from user input & planner):**\nUser Input: {user_input}\nPlanner Output: {plan_output}\n\n"
+            f"**Proposed NDT Approach by ToolSelectorAgent:**\n{tool_result.get('summary_text', '')}\n"
+            f"**Detailed NDT Method Information (from Knowledge Graph for RAG):**\n{rag_details}"
+        )
         with st.spinner("CritiqueAgent reviewing recommendations..."):
-            rag_details_for_critique_tab1 = ""
-            if recommended_methods_tab1_list:
-                rag_details_for_critique_tab1 = kg_instance_tab1.get_entities_details_for_rag(
-                    method_names=recommended_methods_tab1_list
-                    # Material & defect names for RAG in Tab 1 are implicitly part of user_input/planner_output
-                    # get_entities_details_for_rag can handle None for material/defect names
-                )
-            critique_context_tab1 = (
-                f"**Scenario Context (from user input & planner):**\nUser Input: {user_input}\nPlanner Output: {plan_agent_output_tab1}\n\n"
-                f"**Proposed NDT Approach by ToolSelectorAgent:**\n{tools_summary_tab1}\n" # summary_text already contains method names
-                f"**Detailed NDT Method Information (from Knowledge Graph for RAG):**\n{rag_details_for_critique_tab1}"
-            )
-            critique_output_tab1 = loop.run_until_complete(st.session_state.critique.run(critique_context_tab1))
-            critique_output_tab1_html = critique_output_tab1.replace('\n', '<br>')
-            # Using a generic class name, specific style is inline
-            display_agent_output("Critique & Considerations", critique_output_tab1_html, "critique-agent-custom", icon="🕵️‍♂️")
+            critique_agent = CritiqueAgent()
+            critique_output = loop.run_until_complete(critique_agent(critique_input))
+        display_agent_output("CritiqueAgent", critique_output, "critique-agent-custom", icon="🕵️‍♂️")
+        log_agent_response(plan_id, "CritiqueAgent", critique_output)
 
-
+        # RiskAssessmentAgent
+        from agents.risk_assessment_agent import RiskAssessmentAgent
+        risk_input = (
+            f"User Input: {user_input}\nPlanner Output: {plan_output}\n\n"
+            f"Proposed NDT Methods: {', '.join(recommended_methods)}\n\n"
+            f"Detailed NDT Method Information (including potential risks):\n{rag_details}"
+        )
         with st.spinner("RiskAssessmentAgent analyzing potential risks..."):
-            rag_details_for_risk_tab1 = rag_details_for_critique_tab1 # Reuse RAG details which now include risks
-            risk_context_tab1 = (
-                f"**Scenario Context (from user input & planner):**\nUser Input: {user_input}\nPlanner Output: {plan_agent_output_tab1}\n\n"
-                f"**Proposed NDT Methods:** {', '.join(recommended_methods_tab1_list)}\n\n"
-                f"**Detailed NDT Method Information (including potential risks from KG):**\n{rag_details_for_risk_tab1}"
-            )
-            risk_output_tab1 = loop.run_until_complete(st.session_state.risk.run(risk_context_tab1))
-            risk_output_tab1_html = risk_output_tab1.replace('\n', '<br>')
-            # Using a generic class name, specific style is inline
-            display_agent_output("Potential Risk Analysis", risk_output_tab1_html, "risk-agent-custom", icon="⚠️")
+            risk_agent = RiskAssessmentAgent()
+            risk_output = loop.run_until_complete(risk_agent(risk_input))
+        display_agent_output("RiskAssessmentAgent", risk_output, "risk-agent-custom", icon="⚠️")
+        log_agent_response(plan_id, "RiskAssessmentAgent", risk_output)
 
-        forecast_text_tab1 = ""
+        # ForecasterAgent
+        from agents.forecaster_agent import ForecasterAgent
+        forecaster_context = f"{tool_result.get('summary_text', '')}\nCritique: {critique_output}\nRisks: {risk_output}"
         with st.spinner("ForecasterAgent running..."):
-            # Context for forecaster should ideally include selected NDT methods.
-            # For now, using ToolSelector's summary.
-            forecaster_context_tab1 = f"{tools_summary_tab1}\nCritique: {critique_output_tab1}\nRisks: {risk_output_tab1}"
-            forecast_text_tab1 = loop.run_until_complete(st.session_state.fore.run(forecaster_context_tab1))
-            forecast_text_tab1_html = forecast_text_tab1.replace('\n', '<br>')
-            display_agent_output("ForecasterAgent", forecast_text_tab1_html, "forecaster-agent", icon="📉")
+            forecaster_agent = ForecasterAgent()
+            forecast_output = loop.run_until_complete(forecaster_agent(forecaster_context))
+        display_agent_output("ForecasterAgent", forecast_output, "forecaster-agent", icon="📉")
+        log_agent_response(plan_id, "ForecasterAgent", forecast_output)
 
+        # Summary block
         st.markdown("""
         <div class="dashboard-card">
             <h3>📊 Final Inspection Plan Summary</h3>
         </div>
         """, unsafe_allow_html=True)
-        st.code(forecast_text_tab1, language="markdown")
+        st.code(forecast_output, language="markdown")
 
-        # Use the refactored UI function for focused forecast
-        tab1_focused_forecast_context_parts = {
-            "user_input": user_input,
-            "plan_agent_output": plan_agent_output_tab1, # Ensure this is available in scope
-            "tools_summary": tools_summary_tab1 # Ensure this is available
-        }
-        render_focused_forecast_ui(loop, recommended_methods_tab1_list, st.session_state.fore, tab1_focused_forecast_context_parts, "tab1")
+        # Log plan to KG
+        extracted_material = tool_result.get("extracted_material", "NL_Derived_Unknown")
+        extracted_defect = tool_result.get("extracted_defect", "NL_Derived_Unknown")
+        extracted_environment = tool_result.get("extracted_environment", "NL_Derived_Unknown")
+        st.session_state.current_plan_id_tab1 = kg_instance_tab1.log_inspection_plan(
+            plan_text=forecast_output,
+            material=extracted_material,
+            defect=extracted_defect,
+            environment=extracted_environment
+        )
+        if st.session_state.current_plan_id_tab1:
+            st.caption(f"Plan logged with ID: {st.session_state.current_plan_id_tab1}")
 
-        if 'current_plan_id_tab1' not in st.session_state: # Initialize for Tab 1
-            st.session_state.current_plan_id_tab1 = None
+        render_feedback_buttons(kg_instance_tab1, "current_plan_id_tab1", "tab1")
 
-        if forecast_text_tab1:
-            # Log the inspection plan for Tab 1
-            # Extract material, defect, environment from tool_agent_output_tab1
-            extracted_material_tab1 = tool_agent_output_tab1.get("extracted_material", "NL_Derived_Unknown")
-            extracted_defect_tab1 = tool_agent_output_tab1.get("extracted_defect", "NL_Derived_Unknown")
-            extracted_environment_tab1 = tool_agent_output_tab1.get("extracted_environment", "NL_Derived_Unknown")
-
-            # Ensure values are not "unknown" which might be too generic for KG properties
-            if extracted_material_tab1 == "unknown": extracted_material_tab1 = "NL_Derived_Unknown"
-            if extracted_defect_tab1 == "unknown": extracted_defect_tab1 = "NL_Derived_Unknown"
-            if extracted_environment_tab1 == "unknown": extracted_environment_tab1 = "NL_Derived_Unknown"
-
-            st.session_state.current_plan_id_tab1 = kg_instance_tab1.log_inspection_plan(
-                plan_text=forecast_text_tab1, # Using forecast as the plan text
-                material=extracted_material_tab1,
-                defect=extracted_defect_tab1,
-                environment=extracted_environment_tab1
-            )
-            if st.session_state.current_plan_id_tab1:
-                st.caption(f"Plan logged with ID: {st.session_state.current_plan_id_tab1}")
-
-            # Use the refactored UI function for feedback buttons
-            render_feedback_buttons(kg_instance_tab1, "current_plan_id_tab1", "tab1")
 
 # ------------------- TAB 2: KG-Driven Structured Planner -------------------
 with tab2:
